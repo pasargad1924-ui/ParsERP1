@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <ApplicationLanguage>fa-IR</ApplicationLanguage>
+    <StartupObject>ParsERP.App</StartupObject>
+    <RootNamespace>ParsERP</RootNamespace>
+    <AssemblyName>ParsERP</AssemblyName>
+    <Version>0.1.0</Version>
+    <Authors>ParsERP Team</Authors>
+    <Description>نرم‌افزار مدیریت یکپارچه تولید، انبار، سریال و حسابداری</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ParsERP.Core\ParsERP.Core.csproj" />
+  </ItemGroup>
+
+</Project>
