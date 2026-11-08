@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - grok-v0.2
     tags:
       - "v*"
   pull_request:
