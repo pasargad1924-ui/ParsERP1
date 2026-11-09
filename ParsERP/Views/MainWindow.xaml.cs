@@ -55,6 +55,26 @@ namespace ParsERP.Views
             return panel;
         }
 
+        private void OpenSerialWindow()
+        {
+            var w = new SerialWindow();
+            w.Owner = this;
+            w.ShowDialog();
+        }
+
+
+        private void MenuSerials_Click(object sender, RoutedEventArgs e)
+        {
+            var w = new SerialWindow { Owner = this };
+            w.ShowDialog();
+        }
+
+        private void MenuSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var w = new SettingsWindow { Owner = this };
+            w.ShowDialog();
+        }
+
         private Border CreateStatCard(string title, string value, string color)
         {
             var border = new Border

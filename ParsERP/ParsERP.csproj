@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
@@ -9,13 +8,14 @@
     <StartupObject>ParsERP.App</StartupObject>
     <RootNamespace>ParsERP</RootNamespace>
     <AssemblyName>ParsERP</AssemblyName>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>ParsERP Team</Authors>
     <Description>نرم‌افزار مدیریت یکپارچه تولید، انبار، سریال و حسابداری</Description>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\ParsERP.Core\ParsERP.Core.csproj" />
   </ItemGroup>
-
+  <ItemGroup>
+    <None Include="..\Database\Schema.sql" Link="Schema.sql" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

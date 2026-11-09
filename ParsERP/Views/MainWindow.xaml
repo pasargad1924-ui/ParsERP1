@@ -63,7 +63,7 @@
                             </StackPanel>
                         </Button>
 
-                        <Button Style="{StaticResource MenuButtonStyle}" Tag="Serials">
+                        <Button Style="{StaticResource MenuButtonStyle}" Tag="Serials" Click="MenuSerials_Click">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="🔢" FontSize="16" Margin="0,0,12,0"/>
                                 <TextBlock Text="سریال‌ها" VerticalAlignment="Center"/>
@@ -115,7 +115,7 @@
                             </StackPanel>
                         </Button>
 
-                        <Button Style="{StaticResource MenuButtonStyle}" Tag="Settings">
+                        <Button Style="{StaticResource MenuButtonStyle}" Tag="Settings" Click="MenuSettings_Click">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="⚙️" FontSize="16" Margin="0,0,12,0"/>
                                 <TextBlock Text="تنظیمات" VerticalAlignment="Center"/>
