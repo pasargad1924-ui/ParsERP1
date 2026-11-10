@@ -1,4 +1,5 @@
 name: Build ParsERP Windows EXE
+run-name: ParsERP v0.3 Windows x64 build
 
 on:
   push:
