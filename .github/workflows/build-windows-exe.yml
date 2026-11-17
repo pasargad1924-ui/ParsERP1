@@ -9,7 +9,6 @@ on:
       - 'ParsERP.Core/**'
       - 'Database/**'
       - 'Installer/**'
-      - '.github/workflows/build-windows-exe.yml'
   workflow_dispatch:
 
 permissions:
@@ -73,7 +72,7 @@ jobs:
       - name: Compile Windows installer
         shell: pwsh
         run: |
-          $iscc = Join-Path $env:ProgramFiles '(x86)/Inno Setup 6/ISCC.exe'
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
           if (-not (Test-Path $iscc)) {
             $iscc = Join-Path $env:ProgramFiles 'Inno Setup 6/ISCC.exe'
           }
