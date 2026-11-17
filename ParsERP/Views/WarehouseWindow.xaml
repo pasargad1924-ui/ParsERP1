@@ -1,0 +1,78 @@
+<Window x:Class="ParsERP.Views.WarehouseWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="انبار و موجودی"
+        Height="620" Width="920"
+        WindowStartupLocation="CenterOwner"
+        FlowDirection="RightToLeft"
+        FontFamily="Vazirmatn, Tahoma, Segoe UI"
+        Background="{StaticResource BackgroundBrush}">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/Colors.xaml"/>
+                <ResourceDictionary Source="/Styles/Controls.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="انبار — موجودی و رسید / حواله" FontSize="20" FontWeight="Bold"
+                   Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+        <TextBlock Grid.Row="0" Margin="0,32,0,12" FontSize="12"
+                   Foreground="{StaticResource TextSecondaryBrush}"
+                   Text="راهنما: رسید = ورود کالا به انبار | حواله = خروج | موجودی منفی مجاز نیست."/>
+
+        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,8,0,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="100"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                    <TextBlock Text="انبار" FontSize="12" Margin="0,0,0,4" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <ComboBox x:Name="cmbWarehouse" Height="34" DisplayMemberPath="NameFa" Padding="8,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                    <TextBlock Text="کالا" FontSize="12" Margin="0,0,0,4" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <ComboBox x:Name="cmbProduct" Height="34" DisplayMemberPath="Name" Padding="8,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Margin="0,0,8,0">
+                    <TextBlock Text="تعداد" FontSize="12" Margin="0,0,0,4" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBox x:Name="txtQty" Height="34" VerticalContentAlignment="Center" Padding="8,0" Text="1"/>
+                </StackPanel>
+                <Button Grid.Column="3" Content="رسید (ورود)" Style="{StaticResource PrimaryButtonStyle}"
+                        Height="34" Margin="0,18,8,0" Padding="14,0" Click="BtnIn_Click"/>
+                <Button Grid.Column="4" Content="حواله (خروج)" Height="34" Margin="0,18,0,0" Padding="14,0" Click="BtnOut_Click"/>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Style="{StaticResource CardStyle}">
+            <DataGrid x:Name="dgStock" AutoGenerateColumns="False" IsReadOnly="True"
+                      CanUserResizeColumns="True" HeadersVisibility="Column"
+                      GridLinesVisibility="Horizontal" BorderThickness="0" Background="Transparent">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="انبار" Binding="{Binding WarehouseName}" Width="140"/>
+                    <DataGridTextColumn Header="کد کالا" Binding="{Binding ProductCode}" Width="80"/>
+                    <DataGridTextColumn Header="نام کالا" Binding="{Binding ProductName}" Width="*"/>
+                    <DataGridTextColumn Header="موجودی" Binding="{Binding Quantity}" Width="100"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <DockPanel Grid.Row="3" Margin="0,12,0,0">
+            <Button DockPanel.Dock="Left" Content="بازنشانی لیست" Height="34" Padding="14,0" Click="BtnRefresh_Click"/>
+            <TextBlock x:Name="txtStatus" VerticalAlignment="Center" Margin="16,0,0,0"
+                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"/>
+        </DockPanel>
+    </Grid>
+</Window>

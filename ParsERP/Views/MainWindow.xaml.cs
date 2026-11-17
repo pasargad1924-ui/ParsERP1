@@ -68,6 +68,12 @@ namespace ParsERP.Views
             new SerialWindow { Owner = this }.ShowDialog();
         }
 
+        private void MenuWarehouse_Click(object sender, RoutedEventArgs e)
+        {
+            txtPageTitle.Text = "انبار";
+            new WarehouseWindow { Owner = this }.ShowDialog();
+        }
+
         private void MenuSettings_Click(object sender, RoutedEventArgs e)
         {
             new SettingsWindow { Owner = this }.ShowDialog();

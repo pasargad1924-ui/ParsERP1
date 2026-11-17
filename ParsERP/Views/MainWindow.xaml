@@ -116,7 +116,7 @@
                             <Button Style="{StaticResource MenuButtonStyle}" Click="MenuStub_Click">
                                 <TextBlock Text="سفارشات تولید"/>
                             </Button>
-                            <Button Style="{StaticResource MenuButtonStyle}" Click="MenuStub_Click">
+                            <Button Style="{StaticResource MenuButtonStyle}" Click="MenuWarehouse_Click">
                                 <TextBlock Text="انبار"/>
                             </Button>
                             <TextBlock Text="مالی و سیستم" Margin="16,12,16,4" FontSize="11" FontWeight="SemiBold"
