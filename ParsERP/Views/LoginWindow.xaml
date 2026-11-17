@@ -1,7 +1,7 @@
 <Window x:Class="ParsERP.Views.LoginWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="ورود به پارس‌ئی‌آرپی | نسخه 0.6.0"
+        Title="ورود به پارس‌ئی‌آرپی | نسخه 0.7.0"
         Height="520" Width="420"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
@@ -63,7 +63,7 @@
             </StackPanel>
 
             <!-- فوتر -->
-            <TextBlock Grid.Row="2" Text="نسخه 0.6.0 | پارس‌ئی‌آرپی"
+            <TextBlock Grid.Row="2" Text="نسخه 0.7.0 | پارس‌ئی‌آرپی"
                        FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
                        HorizontalAlignment="Center" Margin="0,0,0,20"/>
         </Grid>

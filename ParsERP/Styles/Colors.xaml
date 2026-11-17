@@ -14,12 +14,12 @@
     <Color x:Key="BackgroundColor">#F8FAFC</Color>       <!-- خاکستری بسیار روشن -->
     <Color x:Key="SurfaceColor">#FFFFFF</Color>          <!-- سفید کارت‌ها -->
     <Color x:Key="TextPrimaryColor">#0F172A</Color>      <!-- سرمه‌ای تیره -->
-    <Color x:Key="TextSecondaryColor">#64748B</Color>    <!-- خاکستری متن فرعی -->
+    <Color x:Key="TextSecondaryColor">#334155</Color>    <!-- خاکستری متن فرعی -->
     
     <Color x:Key="SuccessColor">#059669</Color>
     <Color x:Key="WarningColor">#D97706</Color>
     <Color x:Key="DangerColor">#DC2626</Color>
-    <Color x:Key="BorderColor">#E2E8F0</Color>
+    <Color x:Key="BorderColor">#CBD5E1</Color>
 
     <!-- براش‌ها -->
     <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>

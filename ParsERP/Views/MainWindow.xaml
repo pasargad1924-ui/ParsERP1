@@ -1,181 +1,138 @@
 <Window x:Class="ParsERP.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="پارس‌ئی‌آرپی | مدیریت یکپارچه | نسخه 0.6.0"
-        Height="720" Width="1280"
+        Title="پارس‌ئی‌آرپی | مدیریت یکپارچه | نسخه 0.7.0"
+        Height="740" Width="1280"
         WindowStartupLocation="CenterScreen"
         FlowDirection="RightToLeft"
-        FontFamily="Segoe UI, Tahoma, Vazirmatn"
+        FontFamily="Vazirmatn, Tahoma, Segoe UI"
         Background="{StaticResource BackgroundBrush}">
 
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Styles/Colors.xaml"/>
+                <ResourceDictionary Source="/Styles/Controls.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="260"/>   <!-- منوی کناری -->
-            <ColumnDefinition Width="*"/>     <!-- محتوای اصلی -->
-        </Grid.ColumnDefinitions>
+    <DockPanel>
+        <!-- نوار منوی استاندارد -->
+        <Menu DockPanel.Dock="Top" Background="{StaticResource SurfaceBrush}" Padding="4,2">
+            <MenuItem Header="فایل">
+                <MenuItem Header="جدید" Click="MenuStub_Click"/>
+                <MenuItem Header="باز کردن..." Click="MenuStub_Click"/>
+                <MenuItem Header="ذخیره" Click="MenuStub_Click"/>
+                <Separator/>
+                <MenuItem Header="وارد کردن سریال از CSV..." Click="MenuImportSerial_Click"/>
+                <MenuItem Header="صادر کردن سریال به CSV..." Click="MenuExportSerial_Click"/>
+                <Separator/>
+                <MenuItem Header="چاپ..." Click="MenuStub_Click"/>
+                <MenuItem Header="تنظیمات چاپ..." Click="MenuStub_Click"/>
+                <Separator/>
+                <MenuItem Header="خروج" Click="MenuExit_Click"/>
+            </MenuItem>
+            <MenuItem Header="ویرایش">
+                <MenuItem Header="کپی" InputGestureText="Ctrl+C" Click="MenuStub_Click"/>
+                <MenuItem Header="برش" InputGestureText="Ctrl+X" Click="MenuStub_Click"/>
+                <MenuItem Header="چسباندن" InputGestureText="Ctrl+V" Click="MenuStub_Click"/>
+                <Separator/>
+                <MenuItem Header="جستجو..." Click="MenuFocusSearch_Click"/>
+            </MenuItem>
+            <MenuItem Header="نمایش">
+                <MenuItem Header="داشبورد" Click="MenuDashboard_Click"/>
+                <MenuItem Header="بازنشانی نما" Click="MenuStub_Click"/>
+            </MenuItem>
+            <MenuItem Header="راهنما">
+                <MenuItem Header="راهنمای استفاده" Click="MenuHelp_Click"/>
+                <MenuItem Header="درباره نرم‌افزار" Click="MenuAbout_Click"/>
+                <MenuItem Header="به‌روزرسانی" Click="MenuAbout_Click"/>
+            </MenuItem>
+        </Menu>
 
-        <!-- ==================== منوی کناری راست‌چین ==================== -->
-        <Border Grid.Column="0" Background="{StaticResource SurfaceBrush}" 
-                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
-            <DockPanel>
-                <!-- لوگو و نام نرم‌افزار -->
-                <Border DockPanel.Dock="Top" Background="{StaticResource PrimaryBrush}" Padding="20,24">
-                    <StackPanel>
-                        <TextBlock Text="پارس‌ئی‌آرپی" 
-                                   FontSize="22" FontWeight="Bold" 
-                                   Foreground="White" HorizontalAlignment="Center"/>
-                        <TextBlock Text="مدیریت تولید و پروژه" 
-                                   FontSize="12" Foreground="#CCFFFFFF" 
-                                   HorizontalAlignment="Center" Margin="0,4,0,0"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- آیتم‌های منو -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="0,12,0,12">
-
-                        <TextBlock Text="اصلی" Margin="20,8,20,4" 
-                                   FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" FontWeight="SemiBold"/>
-
-                        <!-- داشبورد -->
-                        <Button Style="{StaticResource MenuButtonStyle}" Tag="Dashboard">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="📊" FontSize="16" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="داشبورد" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <TextBlock Text="تولید و انبار" Margin="20,16,20,4" 
-                                   FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" FontWeight="SemiBold"/>
-
-                        <Button Style="{StaticResource MenuButtonStyle}" Tag="Products" Click="MenuProducts_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="📦" FontSize="16" Margin="0,0,12,0"/>
-                                <TextBlock Text="کالا و محصولات" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <Button Style="{StaticResource MenuButtonStyle}" Tag="Serials" Click="MenuSerials_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🔢" FontSize="16" Margin="0,0,12,0"/>
-                                <TextBlock Text="سریال‌ها" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <Button Style="{StaticResource MenuButtonStyle}" Tag="Production">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🏭" FontSize="16" Margin="0,0,12,0"/>
-                                <TextBlock Text="سفارشات تولید" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <Button Style="{StaticResource MenuButtonStyle}" Tag="Warehouse">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🏪" FontSize="16" Margin="0,0,12,0"/>
-                                <TextBlock Text="انبار" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <Button Style="{StaticResource MenuButtonStyle}" Tag="Outsourcing">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🤝" FontSize="16" Margin="0,0,12,0"/>
-                                <TextBlock Text="برون‌سپاری" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <Button Style="{StaticResource MenuButtonStyle}" Tag="Warranty">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🛡️" FontSize="16" Margin="0,0,12,0"/>
-                                <TextBlock Text="گارانتی" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <TextBlock Text="مالی و سیستم" Margin="20,16,20,4" 
-                                   FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" FontWeight="SemiBold"/>
-
-                        <Button Style="{StaticResource MenuButtonStyle}" Tag="Accounting">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="💰" FontSize="16" Margin="0,0,12,0"/>
-                                <TextBlock Text="حسابداری" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <Button Style="{StaticResource MenuButtonStyle}" Tag="Users">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="👥" FontSize="16" Margin="0,0,12,0"/>
-                                <TextBlock Text="کاربران و دسترسی‌ها" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <Button Style="{StaticResource MenuButtonStyle}" Tag="Settings" Click="MenuSettings_Click">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⚙️" FontSize="16" Margin="0,0,12,0"/>
-                                <TextBlock Text="تنظیمات" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                    </StackPanel>
-                </ScrollViewer>
-
-                <!-- اطلاعات کاربر در پایین منو -->
-                <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource BorderBrush}" 
-                        BorderThickness="0,1,0,0" Padding="16,12">
-                    <StackPanel Orientation="Horizontal">
-                        <Border Width="36" Height="36" CornerRadius="18" 
-                                Background="{StaticResource PrimaryLightBrush}" Margin="0,0,10,0">
-                            <TextBlock Text="م" FontSize="14" FontWeight="Bold" 
-                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock x:Name="txtCurrentUser" Text="مدیر سیستم" 
-                                       FontWeight="SemiBold" FontSize="13"/>
-                            <TextBlock Text="خروج" FontSize="11" 
-                                       Foreground="{StaticResource PrimaryBrush}" Cursor="Hand"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-            </DockPanel>
+        <!-- نوار ابزار / جستجو -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="12,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="320"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="txtPageTitle" Text="داشبورد" FontSize="18" FontWeight="SemiBold"
+                           VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}"/>
+                <TextBlock Grid.Column="1" Text="v0.7.0" VerticalAlignment="Center" Margin="0,0,16,0"
+                           Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"/>
+                <Grid Grid.Column="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="txtGlobalSearch" Height="34" VerticalContentAlignment="Center"
+                             Padding="10,0" ToolTip="جستجوی سریال، پارت، محصول..."
+                             KeyDown="GlobalSearch_KeyDown"/>
+                    <Button Grid.Column="1" Width="40" Height="34" Margin="6,0,0,0" Click="BtnSearch_Click"
+                            ToolTip="جستجو" Background="{StaticResource PrimaryBrush}" Foreground="White" BorderThickness="0">
+                        <TextBlock Text="🔍" FontSize="14" HorizontalAlignment="Center"/>
+                    </Button>
+                </Grid>
+            </Grid>
         </Border>
 
-        <!-- ==================== محتوای اصلی ==================== -->
-        <Grid Grid.Column="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="64"/>  <!-- هدر -->
-                <RowDefinition Height="*"/>   <!-- محتوا -->
-            </Grid.RowDefinitions>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="240"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-            <!-- هدر بالا -->
-            <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}" 
-                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="24,0">
-                <Grid>
-                    <TextBlock x:Name="txtPageTitle" Text="داشبورد" 
-                               FontSize="20" FontWeight="SemiBold" 
-                               VerticalAlignment="Center"
-                               Foreground="{StaticResource TextPrimaryBrush}"/>
-                    
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                        <TextBox x:Name="txtGlobalSearch" Width="260" Height="36" 
-                                 VerticalContentAlignment="Center"
-                                 Padding="12,0"
-                                 FlowDirection="RightToLeft"
-                                 ToolTip="جستجوی سریال، پارت، محصول..."
-                                 KeyDown="GlobalSearch_KeyDown"/>
-                        <TextBlock Text="v0.6.0" Margin="16,0,0,0" VerticalAlignment="Center"
-                                   Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"/>
-                    </StackPanel>
-                </Grid>
+            <!-- منوی کناری -->
+            <Border Grid.Column="0" Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Background="{StaticResource PrimaryBrush}" Padding="16,20">
+                        <StackPanel>
+                            <TextBlock Text="پارس‌ئی‌آرپی" FontSize="20" FontWeight="Bold"
+                                       Foreground="White" HorizontalAlignment="Center"/>
+                            <TextBlock Text="مدیریت تولید و سریال" FontSize="12" Foreground="#E0F2F1"
+                                       HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <ScrollViewer>
+                        <StackPanel Margin="0,10,0,10">
+                            <TextBlock Text="اصلی" Margin="16,6,16,4" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <Button Style="{StaticResource MenuButtonStyle}" Click="MenuDashboard_Click">
+                                <TextBlock Text="داشبورد"/>
+                            </Button>
+                            <TextBlock Text="تولید و انبار" Margin="16,12,16,4" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <Button Style="{StaticResource MenuButtonStyle}" Click="MenuProducts_Click">
+                                <TextBlock Text="کالا و محصولات"/>
+                            </Button>
+                            <Button Style="{StaticResource MenuButtonStyle}" Click="MenuSerials_Click">
+                                <TextBlock Text="سریال‌ها"/>
+                            </Button>
+                            <Button Style="{StaticResource MenuButtonStyle}" Click="MenuStub_Click">
+                                <TextBlock Text="سفارشات تولید"/>
+                            </Button>
+                            <Button Style="{StaticResource MenuButtonStyle}" Click="MenuStub_Click">
+                                <TextBlock Text="انبار"/>
+                            </Button>
+                            <TextBlock Text="مالی و سیستم" Margin="16,12,16,4" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <Button Style="{StaticResource MenuButtonStyle}" Click="MenuSettings_Click">
+                                <TextBlock Text="تنظیمات"/>
+                            </Button>
+                            <Button Style="{StaticResource MenuButtonStyle}" Click="MenuHelp_Click">
+                                <TextBlock Text="راهنما و درباره"/>
+                            </Button>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
             </Border>
 
-            <!-- فریم محتوا -->
-            <ContentControl x:Name="MainContent" Grid.Row="1" Margin="24"/>
+            <ContentControl x:Name="MainContent" Grid.Column="1" Margin="20"/>
         </Grid>
-    </Grid>
+    </DockPanel>
 </Window>

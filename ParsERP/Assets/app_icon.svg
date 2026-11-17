@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <rect width="256" height="256" rx="48" fill="#0D9488"/>
+  <text x="128" y="120" font-family="Arial Black, sans-serif" font-size="72" font-weight="bold"
+        fill="white" text-anchor="middle">Pars</text>
+  <text x="128" y="175" font-family="Arial, sans-serif" font-size="36" font-weight="bold"
+        fill="#CCFBF1" text-anchor="middle">ERP</text>
+  <text x="128" y="215" font-family="Arial, sans-serif" font-size="22"
+        fill="#99F6E4" text-anchor="middle">v0.7</text>
+</svg>

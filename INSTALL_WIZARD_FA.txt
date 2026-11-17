@@ -1,0 +1,21 @@
+نصب با ویزارد (Inno Setup)
+========================
+1) روی ویندوز: Visual Studio یا دستور زیر:
+   dotnet publish ParsERP/ParsERP.csproj -c Release -r win-x64 --self-contained false -o publish
+
+2) نصب Inno Setup 6 از سایت jrsoftware.org
+
+3) فایل Installer/ParsERP.iss را با Inno Setup Compiler باز کنید.
+   مسیر Source باید به پوشه publish اشاره کند (در اسکریپت: ..\publish\*)
+
+4) Compile → فایل Setup در Installer/Output ساخته می‌شود.
+
+5) Setup را اجرا کنید:
+   - ویزارد نصب
+   - انتخاب مسیر برنامه
+   - انتخاب مسیر دیتابیس و بکاپ
+   - میانبر دسکتاپ (گزینه فعال)
+
+آیکون:
+- فایل Assets/app_icon.svg را با ابزار آنلاین به .ico تبدیل کنید
+- در ParsERP.iss و csproj به‌عنوان ApplicationIcon قرار دهید
