@@ -87,6 +87,23 @@ CREATE TABLE IF NOT EXISTS Parties (
     PartyId INTEGER PRIMARY KEY AUTOINCREMENT, PartyType TEXT NOT NULL,
     Code TEXT UNIQUE, NameFa TEXT NOT NULL, Mobile TEXT, Phone TEXT, Address TEXT,
     IsActive INTEGER NOT NULL DEFAULT 1, CreatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')));
+CREATE TABLE IF NOT EXISTS Stock (
+    StockId INTEGER PRIMARY KEY AUTOINCREMENT,
+    WarehouseId INTEGER NOT NULL,
+    ProductId INTEGER NOT NULL,
+    Quantity REAL NOT NULL DEFAULT 0,
+    UNIQUE(WarehouseId, ProductId)
+);
+CREATE TABLE IF NOT EXISTS StockTransactions (
+    TransId INTEGER PRIMARY KEY AUTOINCREMENT,
+    WarehouseId INTEGER NOT NULL,
+    ProductId INTEGER NOT NULL,
+    TransType TEXT NOT NULL,
+    Quantity REAL NOT NULL,
+    Notes TEXT,
+    CreatedBy INTEGER,
+    CreatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
 CREATE TABLE IF NOT EXISTS AuditLog (
     LogId INTEGER PRIMARY KEY AUTOINCREMENT, UserId INTEGER, Action TEXT NOT NULL,
     Module TEXT, TableName TEXT, RecordId TEXT, Details TEXT,
@@ -272,6 +289,244 @@ INSERT OR IGNORE INTO Settings (Key, Value, Description) VALUES
         }
         return list;
     }
+
+    public List<WarehouseRow> GetWarehouses()
+    {
+        var list = new List<WarehouseRow>();
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT WarehouseId, Code, NameFa, IFNULL(Location,''), IsActive FROM Warehouses ORDER BY Code";
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+            list.Add(new WarehouseRow { WarehouseId = r.GetInt32(0), Code = r.GetString(1), NameFa = r.GetString(2), Location = r.GetString(3), IsActive = r.GetInt32(4) == 1 });
+        return list;
+    }
+
+    public int EnsureWarehouse(string code, string nameFa)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "INSERT OR IGNORE INTO Warehouses (Code, NameFa) VALUES (@c, @n); SELECT WarehouseId FROM Warehouses WHERE Code=@c;";
+        cmd.Parameters.AddWithValue("@c", code);
+        cmd.Parameters.AddWithValue("@n", nameFa);
+        return Convert.ToInt32(cmd.ExecuteScalar());
+    }
+
+    public List<StockRow> GetStockList(int? warehouseId = null)
+    {
+        var list = new List<StockRow>();
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        if (warehouseId == null)
+        {
+            cmd.CommandText = @"SELECT s.StockId, s.WarehouseId, w.NameFa, s.ProductId, p.Code, p.NameFa, s.Quantity
+                                FROM Stock s
+                                JOIN Warehouses w ON w.WarehouseId = s.WarehouseId
+                                JOIN Products p ON p.ProductId = s.ProductId
+                                ORDER BY w.Code, p.Code";
+        }
+        else
+        {
+            cmd.CommandText = @"SELECT s.StockId, s.WarehouseId, w.NameFa, s.ProductId, p.Code, p.NameFa, s.Quantity
+                                FROM Stock s
+                                JOIN Warehouses w ON w.WarehouseId = s.WarehouseId
+                                JOIN Products p ON p.ProductId = s.ProductId
+                                WHERE s.WarehouseId = @w
+                                ORDER BY p.Code";
+            cmd.Parameters.AddWithValue("@w", warehouseId.Value);
+        }
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+        {
+            list.Add(new StockRow
+            {
+                StockId = r.GetInt32(0),
+                WarehouseId = r.GetInt32(1),
+                WarehouseName = r.GetString(2),
+                ProductId = r.GetInt32(3),
+                ProductCode = r.GetString(4),
+                ProductName = r.GetString(5),
+                Quantity = r.GetDouble(6)
+            });
+        }
+        return list;
+    }
+
+    public void ApplyStockTransaction(int warehouseId, int productId, string transType, double quantity, string? notes, int? createdBy)
+    {
+        if (quantity == 0) throw new ArgumentException("تعداد نمی‌تواند صفر باشد.");
+        using var conn = Open();
+        using var tx = conn.BeginTransaction();
+        // موجودی
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = @"INSERT INTO Stock (WarehouseId, ProductId, Quantity) VALUES (@w, @p, 0)
+                                ON CONFLICT(WarehouseId, ProductId) DO NOTHING;";
+            cmd.Parameters.AddWithValue("@w", warehouseId);
+            cmd.Parameters.AddWithValue("@p", productId);
+            cmd.ExecuteNonQuery();
+        }
+        double delta = transType is "In" or "PurchaseIn" or "ProductionIn" or "AdjustUp" ? Math.Abs(quantity) : -Math.Abs(quantity);
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = "UPDATE Stock SET Quantity = Quantity + @d WHERE WarehouseId=@w AND ProductId=@p;";
+            cmd.Parameters.AddWithValue("@d", delta);
+            cmd.Parameters.AddWithValue("@w", warehouseId);
+            cmd.Parameters.AddWithValue("@p", productId);
+            cmd.ExecuteNonQuery();
+        }
+        // جلوگیری از موجودی منفی در خروج
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = "SELECT Quantity FROM Stock WHERE WarehouseId=@w AND ProductId=@p;";
+            cmd.Parameters.AddWithValue("@w", warehouseId);
+            cmd.Parameters.AddWithValue("@p", productId);
+            var q = Convert.ToDouble(cmd.ExecuteScalar());
+            if (q < -0.0001) { tx.Rollback(); throw new InvalidOperationException("موجودی کافی نیست."); }
+        }
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = @"INSERT INTO StockTransactions (WarehouseId, ProductId, TransType, Quantity, Notes, CreatedBy, CreatedAt)
+                               VALUES (@w, @p, @t, @q, @n, @by, datetime('now','localtime'));";
+            cmd.Parameters.AddWithValue("@w", warehouseId);
+            cmd.Parameters.AddWithValue("@p", productId);
+            cmd.Parameters.AddWithValue("@t", transType);
+            cmd.Parameters.AddWithValue("@q", Math.Abs(quantity));
+            cmd.Parameters.AddWithValue("@n", (object?)notes ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@by", (object?)createdBy ?? DBNull.Value);
+            try { cmd.ExecuteNonQuery(); }
+            catch
+            {
+                // اگر جدول تراکنش در bootstrap نبود، فقط موجودی مهم است
+            }
+        }
+        tx.Commit();
+        AppLogger.Info($"Stock {transType} w={warehouseId} p={productId} q={quantity}");
+    }
+
+    public void TransferStock(int fromWarehouseId, int toWarehouseId, int productId, double quantity, string? notes, int? createdBy)
+    {
+        if (fromWarehouseId == toWarehouseId)
+            throw new ArgumentException("انبار مبدأ و مقصد نباید یکی باشد.");
+        if (quantity <= 0) throw new ArgumentException("تعداد نامعتبر است.");
+        ApplyStockTransaction(fromWarehouseId, productId, "TransferOut", quantity, notes ?? "انتقال خروجی", createdBy);
+        ApplyStockTransaction(toWarehouseId, productId, "TransferIn", quantity, notes ?? "انتقال ورودی", createdBy);
+    }
+
+    public List<StockTxRow> GetRecentStockTransactions(int limit = 100)
+    {
+        var list = new List<StockTxRow>();
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT t.TransId, t.WarehouseId, IFNULL(w.NameFa,''), t.ProductId, IFNULL(p.Code,''), IFNULL(p.NameFa,''),
+                                   t.TransType, t.Quantity, IFNULL(t.Notes,''), t.CreatedAt
+                            FROM StockTransactions t
+                            LEFT JOIN Warehouses w ON w.WarehouseId = t.WarehouseId
+                            LEFT JOIN Products p ON p.ProductId = t.ProductId
+                            ORDER BY t.TransId DESC LIMIT @lim";
+        cmd.Parameters.AddWithValue("@lim", limit);
+        try
+        {
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                list.Add(new StockTxRow
+                {
+                    TransId = r.GetInt32(0),
+                    WarehouseId = r.GetInt32(1),
+                    WarehouseName = r.GetString(2),
+                    ProductId = r.GetInt32(3),
+                    ProductCode = r.GetString(4),
+                    ProductName = r.GetString(5),
+                    TransType = r.GetString(6),
+                    Quantity = r.GetDouble(7),
+                    Notes = r.GetString(8),
+                    CreatedAt = r.IsDBNull(9) ? "" : r.GetString(9)
+                });
+            }
+        }
+        catch { /* جدول ممکن است خالی/جدید باشد */ }
+        return list;
+    }
+
+    public int SaveParty(string partyType, string nameFa, string? code, string? mobile)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"INSERT INTO Parties (PartyType, Code, NameFa, Mobile, IsActive, CreatedAt)
+                            VALUES (@t, @c, @n, @m, 1, datetime('now','localtime'));
+                            SELECT last_insert_rowid();";
+        cmd.Parameters.AddWithValue("@t", partyType);
+        cmd.Parameters.AddWithValue("@c", (object?)code ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@n", nameFa.Trim());
+        cmd.Parameters.AddWithValue("@m", (object?)mobile ?? DBNull.Value);
+        return Convert.ToInt32(cmd.ExecuteScalar());
+    }
+
+    public List<PartyRow> GetParties(string? partyType = null)
+    {
+        var list = new List<PartyRow>();
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        if (string.IsNullOrEmpty(partyType))
+            cmd.CommandText = "SELECT PartyId, PartyType, IFNULL(Code,''), NameFa, IFNULL(Mobile,'') FROM Parties WHERE IsActive=1 ORDER BY NameFa";
+        else
+        {
+            cmd.CommandText = "SELECT PartyId, PartyType, IFNULL(Code,''), NameFa, IFNULL(Mobile,'') FROM Parties WHERE IsActive=1 AND PartyType=@t ORDER BY NameFa";
+            cmd.Parameters.AddWithValue("@t", partyType);
+        }
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+            list.Add(new PartyRow { PartyId = r.GetInt32(0), PartyType = r.GetString(1), Code = r.GetString(2), NameFa = r.GetString(3), Mobile = r.GetString(4) });
+        return list;
+    }
+}
+
+public class StockTxRow
+{
+    public int TransId { get; set; }
+    public int WarehouseId { get; set; }
+    public string WarehouseName { get; set; } = "";
+    public int ProductId { get; set; }
+    public string ProductCode { get; set; } = "";
+    public string ProductName { get; set; } = "";
+    public string TransType { get; set; } = "";
+    public double Quantity { get; set; }
+    public string Notes { get; set; } = "";
+    public string CreatedAt { get; set; } = "";
+}
+
+public class PartyRow
+{
+    public int PartyId { get; set; }
+    public string PartyType { get; set; } = "";
+    public string Code { get; set; } = "";
+    public string NameFa { get; set; } = "";
+    public string Mobile { get; set; } = "";
+}
+
+public class WarehouseRow
+{
+    public int WarehouseId { get; set; }
+    public string Code { get; set; } = "";
+    public string NameFa { get; set; } = "";
+    public string Location { get; set; } = "";
+    public bool IsActive { get; set; }
+}
+
+public class StockRow
+{
+    public int StockId { get; set; }
+    public int WarehouseId { get; set; }
+    public string WarehouseName { get; set; } = "";
+    public int ProductId { get; set; }
+    public string ProductCode { get; set; } = "";
+    public string ProductName { get; set; } = "";
+    public double Quantity { get; set; }
 }
 
 public class ProductRow

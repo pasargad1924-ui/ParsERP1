@@ -62,10 +62,22 @@ namespace ParsERP.Views
             new ProductsWindow { Owner = this }.ShowDialog();
         }
 
+        private void MenuParties_Click(object sender, RoutedEventArgs e)
+        {
+            txtPageTitle.Text = "اشخاص";
+            new PartiesWindow { Owner = this }.ShowDialog();
+        }
+
         private void MenuSerials_Click(object sender, RoutedEventArgs e)
         {
             txtPageTitle.Text = "سریال‌ها";
             new SerialWindow { Owner = this }.ShowDialog();
+        }
+
+        private void MenuWarehouse_Click(object sender, RoutedEventArgs e)
+        {
+            txtPageTitle.Text = "انبار";
+            new WarehouseWindow { Owner = this }.ShowDialog();
         }
 
         private void MenuSettings_Click(object sender, RoutedEventArgs e)
