@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-windows:
@@ -58,10 +58,13 @@ jobs:
           }
           Write-Host "Created $($exe.FullName) ($($exe.Length) bytes)"
 
-      - name: Upload Windows x64 artifact
-        uses: actions/upload-artifact@v4
+      - name: Publish EXE to GitHub Releases
+        if: github.event_name == 'push' && github.ref == 'refs/heads/grok-v0.3'
+        uses: softprops/action-gh-release@v2
         with:
-          name: ParsERP-win-x64
-          path: publish/
-          if-no-files-found: error
-          retention-days: 30
+          tag_name: parserp-v0.3-build-${{ github.run_number }}
+          name: ParsERP grok-v0.3 build ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          body: Automated Windows x64 build from branch grok-v0.3.
+          prerelease: true
+          files: publish/ParsERP.exe
