@@ -125,7 +125,7 @@ begin
       '[Paths]' + #13#10 +
       'Database=' + DataPath + '\ParsERP.db' + #13#10 +
       'Backup=' + BackupPath + #13#10 +
-      #13#10 +
+      '' + #13#10 +
       '[App]' + #13#10 +
       'Version={#MyAppVersion}' + #13#10 +
       'Language=fa' + #13#10, False);
