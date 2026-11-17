@@ -63,6 +63,13 @@ namespace ParsERP.Views
         }
 
 
+
+        private void MenuProducts_Click(object sender, RoutedEventArgs e)
+        {
+            var w = new ProductsWindow { Owner = this };
+            w.ShowDialog();
+        }
+
         private void MenuSerials_Click(object sender, RoutedEventArgs e)
         {
             var w = new SerialWindow { Owner = this };
