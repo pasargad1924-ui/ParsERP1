@@ -1,28 +1,27 @@
-name: Build ParsERP Windows EXE
+name: Build ParsERP Windows Installer
 
 on:
   push:
     branches:
-      - main
-      - grok-v0.5
-      - grok-v0.6
-    tags:
-      - "v*"
-  pull_request:
-    branches:
-      - main
+      - grok-v0.7
+    paths:
+      - 'ParsERP/**'
+      - 'ParsERP.Core/**'
+      - 'Database/**'
+      - 'Installer/**'
+      - '.github/workflows/build-windows-exe.yml'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build-windows:
-    name: Build Windows x64
+  build-installer:
+    name: Build Windows x64 Setup
     runs-on: windows-latest
 
     steps:
-      - name: Checkout source
+      - name: Checkout version 0.7 source
         uses: actions/checkout@v4
 
       - name: Setup .NET 8
@@ -30,13 +29,26 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Read and validate version
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content 'ParsERP/ParsERP.csproj'
+          $appVersion = $project.Project.PropertyGroup.Version | Select-Object -First 1
+          if ([string]::IsNullOrWhiteSpace($appVersion)) { throw 'Version is missing in ParsERP.csproj' }
+          $iss = Get-Content 'Installer/ParsERP.iss' -Raw
+          if ($iss -notmatch '#define MyAppVersion "([^"]+)"') { throw 'MyAppVersion is missing in Installer/ParsERP.iss' }
+          $installerVersion = $Matches[1]
+          if ($installerVersion -ne $appVersion) {
+            throw "Version mismatch: project=$appVersion installer=$installerVersion. Update both to the same v0.7 version."
+          }
+          "app_version=$appVersion" >> $env:GITHUB_OUTPUT
+          Write-Host "Building ParsERP $appVersion"
+
       - name: Restore dependencies
         run: dotnet restore ParsERP/ParsERP.csproj
 
-      - name: Build Release
-        run: dotnet build ParsERP/ParsERP.csproj --configuration Release --no-restore
-
-      - name: Publish self-contained single-file EXE
+      - name: Publish self-contained Windows x64 application
         run: >
           dotnet publish ParsERP/ParsERP.csproj
           --configuration Release
@@ -48,23 +60,45 @@ jobs:
           -p:DebugType=None
           -p:DebugSymbols=false
 
-      - name: Verify executable
+      - name: Verify published application
         shell: pwsh
         run: |
-          $exe = Get-ChildItem publish -Filter ParsERP.exe -File
-          if (-not $exe) {
-            Get-ChildItem publish -Recurse | Format-Table FullName, Length
-            throw "ParsERP.exe was not generated."
-          }
-          Write-Host "Created $($exe.FullName) ($($exe.Length) bytes)"
+          $exe = Get-Item 'publish/ParsERP.exe' -ErrorAction Stop
+          if ($exe.Length -le 0) { throw 'ParsERP.exe is empty.' }
+          Write-Host "Published $($exe.FullName) ($($exe.Length) bytes)"
 
-      - name: Publish EXE to GitHub Releases
-        if: github.event_name == 'push' && github.ref == 'refs/heads/grok-v0.6'
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Compile Windows installer
+        shell: pwsh
+        run: |
+          $iscc = Join-Path $env:ProgramFiles '(x86)/Inno Setup 6/ISCC.exe'
+          if (-not (Test-Path $iscc)) {
+            $iscc = Join-Path $env:ProgramFiles 'Inno Setup 6/ISCC.exe'
+          }
+          if (-not (Test-Path $iscc)) { throw 'Inno Setup compiler (ISCC.exe) was not found.' }
+          & $iscc 'Installer/ParsERP.iss'
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
+          $setup = Get-ChildItem 'Installer/Output' -Filter '*.exe' -File | Select-Object -First 1
+          if (-not $setup) { throw 'Setup EXE was not generated.' }
+          Write-Host "Created installer: $($setup.FullName) ($($setup.Length) bytes)"
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ParsERP-Setup-v${{ steps.version.outputs.app_version }}-win-x64
+          path: Installer/Output/*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish installer to GitHub Releases
+        if: github.event_name == 'push' && github.ref == 'refs/heads/grok-v0.7'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: parserp-v0.6-build-${{ github.run_number }}
-          name: ParsERP v0.6 build ${{ github.run_number }}
+          tag_name: parserp-v0.7-build-${{ github.run_number }}
+          name: ParsERP v0.7 Setup ${{ github.run_number }}
           target_commitish: ${{ github.sha }}
-          body: Automated Windows x64 self-contained build from branch grok-v0.6.
+          body: Windows x64 Setup Wizard installer for ParsERP ${{ steps.version.outputs.app_version }}.
           prerelease: true
-          files: publish/ParsERP.exe
+          files: Installer/Output/*.exe
