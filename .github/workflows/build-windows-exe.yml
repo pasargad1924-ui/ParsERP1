@@ -9,6 +9,7 @@ on:
       - 'ParsERP.Core/**'
       - 'Database/**'
       - 'Installer/**'
+      - '.github/workflows/**'
   workflow_dispatch:
 
 permissions:
