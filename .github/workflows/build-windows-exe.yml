@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - grok-v.4
+      - grok-v0.5
     tags:
       - "v*"
   pull_request:
@@ -58,12 +58,12 @@ jobs:
           Write-Host "Created $($exe.FullName) ($($exe.Length) bytes)"
 
       - name: Publish EXE to GitHub Releases
-        if: github.event_name == 'push' && github.ref == 'refs/heads/grok-v.4'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/grok-v0.5'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: parserp-v0.4-build-${{ github.run_number }}
-          name: ParsERP grok-v.4 build ${{ github.run_number }}
+          tag_name: parserp-v0.5-build-${{ github.run_number }}
+          name: ParsERP v0.5 build ${{ github.run_number }}
           target_commitish: ${{ github.sha }}
-          body: Automated Windows x64 build from branch grok-v.4.
+          body: Automated Windows x64 self-contained build from branch grok-v0.5.
           prerelease: true
           files: publish/ParsERP.exe
