@@ -85,6 +85,7 @@ jobs:
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: ParsERP-Setup-v${{ steps.version.outputs.app_version }}-win-x64
           path: Installer/Output/*.exe
