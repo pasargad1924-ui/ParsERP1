@@ -5,7 +5,7 @@
 
 #define MyAppName "پارس‌ئی‌آرپی"
 #define MyAppNameEn "ParsERP"
-#define MyAppVersion "0.2.0"
+#define MyAppVersion "0.6.0"
 #define MyAppPublisher "ParsERP"
 #define MyAppURL "https://github.com/pasargad1924-ui/ParsERP"
 #define MyAppExeName "ParsERP.exe"
@@ -40,7 +40,7 @@ InfoAfterFile=
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "ایجاد میانبر روی دسکتاپ"; GroupDescription: "میانبرها:"
+Name: "desktopicon"; Description: "ایجاد میانبر روی دسکتاپ"; GroupDescription: "میانبرها:"; Flags: checkedonce
 Name: "quicklaunchicon"; Description: "ایجاد میانبر در Quick Launch"; GroupDescription: "میانبرها:"; Flags: unchecked
 
 [Files]

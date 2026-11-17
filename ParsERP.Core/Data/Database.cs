@@ -121,15 +121,29 @@ INSERT OR IGNORE INTO Settings (Key, Value, Description) VALUES
         return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
     }
 
-    public int InsertSerial(int productId, string serialNo, string productTypeCode,
-        int solarYear, int serialNumber, int checkDigit, int? createdBy)
+    public HashSet<int> GetUsedSerialNumbers(string productTypeCode, int solarYear)
+    {
+        var set = new HashSet<int>();
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT SerialNumber FROM SerialNumbers
+                            WHERE ProductTypeCode = @c AND SolarYear = @y";
+        cmd.Parameters.AddWithValue("@c", productTypeCode);
+        cmd.Parameters.AddWithValue("@y", solarYear);
+        using var r = cmd.ExecuteReader();
+        while (r.Read()) set.Add(r.GetInt32(0));
+        return set;
+    }
+
+    public int InsertSerialWithPart(int productId, string serialNo, string productTypeCode,
+        int solarYear, int serialNumber, int checkDigit, string? partNumber, int? createdBy)
     {
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             INSERT INTO SerialNumbers
-            (ProductId, SerialNo, ProductTypeCode, SolarYear, SerialNumber, CheckDigit, Status, CreatedBy, CreatedAt)
-            VALUES (@pid, @sno, @ptc, @year, @num, @chk, 'InStock', @by, datetime('now','localtime'));
+            (ProductId, SerialNo, ProductTypeCode, SolarYear, SerialNumber, CheckDigit, PartNumber, Status, CreatedBy, CreatedAt)
+            VALUES (@pid, @sno, @ptc, @year, @num, @chk, @part, 'InStock', @by, datetime('now','localtime'));
             SELECT last_insert_rowid();";
         cmd.Parameters.AddWithValue("@pid", productId);
         cmd.Parameters.AddWithValue("@sno", serialNo);
@@ -137,10 +151,57 @@ INSERT OR IGNORE INTO Settings (Key, Value, Description) VALUES
         cmd.Parameters.AddWithValue("@year", solarYear);
         cmd.Parameters.AddWithValue("@num", serialNumber);
         cmd.Parameters.AddWithValue("@chk", checkDigit);
+        cmd.Parameters.AddWithValue("@part", (object?)partNumber ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@by", (object?)createdBy ?? DBNull.Value);
         var id = Convert.ToInt32(cmd.ExecuteScalar());
-        AppLogger.Info($"Serial saved: {serialNo} (Id={id})");
+        AppLogger.Info($"Serial saved: {serialNo} part={partNumber}");
         return id;
+    }
+
+    public List<SerialListItem> SearchSerials(string? query, int limit = 500)
+    {
+        var list = new List<SerialListItem>();
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            cmd.CommandText = @"SELECT s.SerialId, s.SerialNo, s.ProductTypeCode, s.SolarYear,
+                                       s.SerialNumber, s.CheckDigit, s.Status, s.PartNumber, p.NameFa, s.CreatedAt
+                                FROM SerialNumbers s
+                                LEFT JOIN Products p ON p.ProductId = s.ProductId
+                                ORDER BY s.SerialId DESC LIMIT @lim";
+            cmd.Parameters.AddWithValue("@lim", limit);
+        }
+        else
+        {
+            cmd.CommandText = @"SELECT s.SerialId, s.SerialNo, s.ProductTypeCode, s.SolarYear,
+                                       s.SerialNumber, s.CheckDigit, s.Status, s.PartNumber, p.NameFa, s.CreatedAt
+                                FROM SerialNumbers s
+                                LEFT JOIN Products p ON p.ProductId = s.ProductId
+                                WHERE s.SerialNo LIKE @q OR IFNULL(s.PartNumber,'') LIKE @q OR IFNULL(p.NameFa,'') LIKE @q
+                                      OR s.ProductTypeCode LIKE @q OR s.Status LIKE @q
+                                ORDER BY s.SerialId DESC LIMIT @lim";
+            cmd.Parameters.AddWithValue("@q", "%" + query.Trim() + "%");
+            cmd.Parameters.AddWithValue("@lim", limit);
+        }
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+        {
+            list.Add(new SerialListItem
+            {
+                SerialId = r.GetInt32(0),
+                SerialNo = r.GetString(1),
+                ProductTypeCode = r.GetString(2),
+                SolarYear = r.GetInt32(3),
+                SerialNumber = r.GetInt32(4),
+                CheckDigit = r.GetInt32(5),
+                Status = r.GetString(6),
+                PartNumber = r.IsDBNull(7) ? "" : r.GetString(7),
+                ProductName = r.IsDBNull(8) ? "" : r.GetString(8),
+                CreatedAt = r.IsDBNull(9) ? "" : r.GetString(9)
+            });
+        }
+        return list;
     }
 
     public List<(int Id, string Code, string NameFa)> GetActiveProducts()
@@ -224,4 +285,18 @@ public class ProductRow
     public bool HasWarranty { get; set; }
     public int WarrantyMonths { get; set; }
     public bool IsActive { get; set; }
+}
+
+public class SerialListItem
+{
+    public int SerialId { get; set; }
+    public string SerialNo { get; set; } = "";
+    public string ProductTypeCode { get; set; } = "";
+    public int SolarYear { get; set; }
+    public int SerialNumber { get; set; }
+    public int CheckDigit { get; set; }
+    public string Status { get; set; } = "";
+    public string PartNumber { get; set; } = "";
+    public string ProductName { get; set; } = "";
+    public string CreatedAt { get; set; } = "";
 }

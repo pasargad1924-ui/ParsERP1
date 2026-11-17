@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="مدیریت سریال‌ها"
-        Height="640" Width="980"
+        Height="680" Width="1000"
         WindowStartupLocation="CenterOwner"
         FlowDirection="RightToLeft"
         FontFamily="Vazirmatn, Tahoma, Segoe UI"
@@ -21,14 +21,16 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <TextBlock Text="تولید و مدیریت سریال ۱۰ رقمی" FontSize="22" FontWeight="Bold"
-                   Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                   Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
 
-        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+        <!-- تولید -->
+        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,0,0,12">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="2*"/>
@@ -37,52 +39,73 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                <StackPanel Grid.Column="0" Margin="0,0,10,0">
                     <TextBlock Text="محصول" FontSize="12" Margin="0,0,0,4" Foreground="{StaticResource TextSecondaryBrush}"/>
-                    <ComboBox x:Name="cmbProduct" Height="36" DisplayMemberPath="Name"
-                              SelectedValuePath="Code" Padding="8,0"/>
+                    <ComboBox x:Name="cmbProduct" Height="34" DisplayMemberPath="Name" Padding="8,0"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Margin="0,0,12,0">
+                <StackPanel Grid.Column="1" Margin="0,0,10,0">
                     <TextBlock Text="سال شمسی (۲ رقم)" FontSize="12" Margin="0,0,0,4" Foreground="{StaticResource TextSecondaryBrush}"/>
-                    <TextBox x:Name="txtSolarYear" Height="36" MaxLength="2" VerticalContentAlignment="Center" Padding="8,0"/>
+                    <TextBox x:Name="txtSolarYear" Height="34" MaxLength="2" VerticalContentAlignment="Center" Padding="8,0"/>
                 </StackPanel>
-                <StackPanel Grid.Column="2" Margin="0,0,12,0">
-                    <TextBlock Text="شماره شروع" FontSize="12" Margin="0,0,0,4" Foreground="{StaticResource TextSecondaryBrush}"/>
-                    <TextBox x:Name="txtStartNumber" Height="36" MaxLength="5" VerticalContentAlignment="Center" Padding="8,0"/>
+                <StackPanel Grid.Column="2" Margin="0,0,10,0">
+                    <TextBlock Text="پارت تولید" FontSize="12" Margin="0,0,0,4" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBox x:Name="txtPart" Height="34" VerticalContentAlignment="Center" Padding="8,0"
+                             ToolTip="شناسه پارت/بچ تولید"/>
                 </StackPanel>
-                <StackPanel Grid.Column="3" Margin="0,0,12,0">
-                    <TextBlock Text="تعداد" FontSize="12" Margin="0,0,0,4" Foreground="{StaticResource TextSecondaryBrush}"/>
-                    <TextBox x:Name="txtCount" Height="36" VerticalContentAlignment="Center" Padding="8,0"/>
+                <StackPanel Grid.Column="3" Margin="0,0,10,0">
+                    <TextBlock Text="تعداد سریال جدید" FontSize="12" Margin="0,0,0,4" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    <TextBox x:Name="txtCount" Height="34" VerticalContentAlignment="Center" Padding="8,0"/>
                 </StackPanel>
-                <Button Grid.Column="4" Content="تولید سریال" Style="{StaticResource PrimaryButtonStyle}"
-                        VerticalAlignment="Bottom" Height="36" Padding="20,0" Click="BtnGenerate_Click"/>
+                <Button Grid.Column="4" Content="تولید سریال یکتا" Style="{StaticResource PrimaryButtonStyle}"
+                        VerticalAlignment="Bottom" Height="34" Padding="16,0" Click="BtnGenerate_Click"/>
             </Grid>
         </Border>
 
-        <Border Grid.Row="2" Style="{StaticResource CardStyle}">
+        <!-- جستجو در سریال‌های ذخیره‌شده -->
+        <DockPanel Grid.Row="2" Margin="0,0,0,8">
+            <TextBlock Text="سریال‌های ثبت‌شده" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0"/>
+            <Button DockPanel.Dock="Left" Content="بازنشانی" Height="32" Margin="8,0,0,0" Padding="12,0" Click="BtnReload_Click"/>
+            <Button DockPanel.Dock="Left" Content="کپی انتخاب‌شده" Height="32" Margin="8,0,0,0" Padding="12,0" Click="BtnCopy_Click"/>
+            <TextBox x:Name="txtSearch" Height="32" VerticalContentAlignment="Center" Padding="8,0"
+                     ToolTip="جستجو در سریال، پارت، محصول..." TextChanged="TxtSearch_TextChanged"/>
+        </DockPanel>
+
+        <Border Grid.Row="3" Style="{StaticResource CardStyle}">
             <DataGrid x:Name="dgSerials" AutoGenerateColumns="False" IsReadOnly="True"
                       HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                      CanUserAddRows="False" BorderThickness="0" Background="Transparent">
+                      CanUserAddRows="False" CanUserResizeColumns="True" CanUserResizeRows="True"
+                      SelectionMode="Extended" SelectionUnit="FullRow"
+                      BorderThickness="0" Background="Transparent"
+                      ClipboardCopyMode="IncludeHeader">
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="کپی سریال" Click="MenuCopySerial_Click"/>
+                        <MenuItem Header="کپی ردیف" Click="MenuCopyRow_Click"/>
+                        <MenuItem Header="کپی همه انتخاب‌شده" Click="BtnCopy_Click"/>
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="سریال" Binding="{Binding SerialNo}" Width="140"/>
-                    <DataGridTextColumn Header="کد محصول" Binding="{Binding ProductTypeCode}" Width="90"/>
-                    <DataGridTextColumn Header="سال" Binding="{Binding SolarYear}" Width="70"/>
-                    <DataGridTextColumn Header="شماره سری" Binding="{Binding SerialNumber}" Width="90"/>
-                    <DataGridTextColumn Header="رقم کنترل" Binding="{Binding CheckDigit}" Width="80"/>
-                    <DataGridTextColumn Header="وضعیت" Binding="{Binding Status}" Width="*"/>
+                    <DataGridTextColumn Header="سریال" Binding="{Binding SerialNo}" Width="130"/>
+                    <DataGridTextColumn Header="محصول" Binding="{Binding ProductName}" Width="140"/>
+                    <DataGridTextColumn Header="کد" Binding="{Binding ProductTypeCode}" Width="60"/>
+                    <DataGridTextColumn Header="سال" Binding="{Binding SolarYear}" Width="55"/>
+                    <DataGridTextColumn Header="شماره" Binding="{Binding SerialNumber}" Width="70"/>
+                    <DataGridTextColumn Header="پارت" Binding="{Binding PartNumber}" Width="100"/>
+                    <DataGridTextColumn Header="وضعیت" Binding="{Binding Status}" Width="90"/>
+                    <DataGridTextColumn Header="تاریخ ثبت" Binding="{Binding CreatedAt}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
 
-        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,16,0,0">
-            <TextBox x:Name="txtManualSerial" Width="180" Height="36" MaxLength="10"
-                     VerticalContentAlignment="Center" Padding="8,0" ToolTip="سریال ۱۰ رقمی"/>
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,12,0,0">
+            <TextBox x:Name="txtManualSerial" Width="170" Height="34" MaxLength="10"
+                     VerticalContentAlignment="Center" Padding="8,0"/>
             <Button Content="ثبت دستی" Style="{StaticResource PrimaryButtonStyle}"
-                    Height="36" Margin="8,0,0,0" Padding="16,0" Click="BtnManual_Click"/>
-            <Button Content="ذخیره همه در دیتابیس" Style="{StaticResource PrimaryButtonStyle}"
-                    Height="36" Margin="12,0,0,0" Padding="16,0" Click="BtnSaveAll_Click"/>
-            <TextBlock x:Name="txtStatus" VerticalAlignment="Center" Margin="20,0,0,0" FontSize="13"
-                       Foreground="{StaticResource TextSecondaryBrush}"/>
+                    Height="34" Margin="8,0,0,0" Padding="14,0" Click="BtnManual_Click"/>
+            <Button Content="ذخیره تولید جدید در دیتابیس" Style="{StaticResource PrimaryButtonStyle}"
+                    Height="34" Margin="10,0,0,0" Padding="14,0" Click="BtnSaveAll_Click"/>
+            <TextBlock x:Name="txtStatus" VerticalAlignment="Center" Margin="16,0,0,0" FontSize="12"
+                       Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"/>
         </StackPanel>
     </Grid>
 </Window>

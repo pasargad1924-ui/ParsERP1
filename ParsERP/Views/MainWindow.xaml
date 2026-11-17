@@ -1,7 +1,7 @@
 <Window x:Class="ParsERP.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="پارس‌ئی‌آرپی | مدیریت یکپارچه"
+        Title="پارس‌ئی‌آرپی | مدیریت یکپارچه | نسخه 0.6.0"
         Height="720" Width="1280"
         WindowStartupLocation="CenterScreen"
         FlowDirection="RightToLeft"
@@ -162,11 +162,14 @@
                                Foreground="{StaticResource TextPrimaryBrush}"/>
                     
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                        <TextBox Width="260" Height="36" 
+                        <TextBox x:Name="txtGlobalSearch" Width="260" Height="36" 
                                  VerticalContentAlignment="Center"
                                  Padding="12,0"
                                  FlowDirection="RightToLeft"
-                                 ToolTip="جستجوی سریع در همه بخش‌ها..."/>
+                                 ToolTip="جستجوی سریال، پارت، محصول..."
+                                 KeyDown="GlobalSearch_KeyDown"/>
+                        <TextBlock Text="v0.6.0" Margin="16,0,0,0" VerticalAlignment="Center"
+                                   Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"/>
                     </StackPanel>
                 </Grid>
             </Border>

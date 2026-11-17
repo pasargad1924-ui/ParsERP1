@@ -82,6 +82,16 @@ namespace ParsERP.Views
             w.ShowDialog();
         }
 
+
+        private void GlobalSearch_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key != System.Windows.Input.Key.Enter) return;
+            var q = txtGlobalSearch.Text?.Trim() ?? "";
+            if (string.IsNullOrEmpty(q)) return;
+            var w = new SerialWindow(q) { Owner = this };
+            w.ShowDialog();
+        }
+
         private Border CreateStatCard(string title, string value, string color)
         {
             var border = new Border
