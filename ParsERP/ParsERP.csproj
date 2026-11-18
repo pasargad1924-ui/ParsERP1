@@ -8,7 +8,7 @@
     <StartupObject>ParsERP.App</StartupObject>
     <RootNamespace>ParsERP</RootNamespace>
     <AssemblyName>ParsERP</AssemblyName>
-    <Version>1.1.0</Version>
+    <Version>1.3.0</Version>
     <Authors>ParsERP Team</Authors>
     <Description>نرم‌افزار مدیریت یکپارچه تولید، انبار، سریال و حسابداری</Description>
   </PropertyGroup>
