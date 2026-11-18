@@ -9,7 +9,7 @@ using ParsERP.Core.Services;
 
 namespace ParsERP.Views
 {
-    public partial class WarehouseWindow : Window
+    public partial class WarehouseWindow : UserControl
     {
         private Database? _db;
         private class ProdItem { public int Id { get; set; } public string Name { get; set; } = ""; }

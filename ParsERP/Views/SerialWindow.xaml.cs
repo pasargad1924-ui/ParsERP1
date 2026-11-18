@@ -9,7 +9,7 @@ using ParsERP.Core.Services;
 
 namespace ParsERP.Views
 {
-    public partial class SerialWindow : Window
+    public partial class SerialWindow : UserControl
     {
         public class ProductItem
         {
@@ -253,6 +253,35 @@ namespace ParsERP.Views
             {
                 AppLogger.Error("SaveAll", ex);
                 MessageBox.Show("خطا:\n" + ex.Message, "خطا", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnTrace_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string? serial = null;
+                if (dgSerials.SelectedItem is SerialListItem it) serial = it.SerialNo;
+                if (string.IsNullOrEmpty(serial) && dgSerials.CurrentItem is SerialListItem it2) serial = it2.SerialNo;
+                if (string.IsNullOrEmpty(serial))
+                {
+                    MessageBox.Show("یک سریال را از لیست انتخاب کنید.");
+                    return;
+                }
+                if (_db == null) return;
+                var tr = _db.GetSerialTrace(serial);
+                if (tr == null) { MessageBox.Show("یافت نشد."); return; }
+                var msg =
+                    $"سریال: {tr.SerialNo}\nکالا: {tr.ProductName}\nوضعیت: {tr.Status}\nپارت: {tr.PartNumber}\n" +
+                    $"ثبت: {tr.CreatedAt}\nتولید: {tr.ProductionDate}\nفروش: {tr.SaleDate}  قیمت: {tr.SalePrice}\n" +
+                    $"گارانتی: {tr.WarrantyStart} تا {tr.WarrantyEnd}\n\n" +
+                    "در نسخه‌های بعد با کلیک روی تأمین‌کننده/مشتری به سوابق همان شخص می‌روید.";
+                MessageBox.Show(msg.Replace("\\n", "\n").Replace("\n", Environment.NewLine), "تایم‌لاین سریال");
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Trace", ex);
+                MessageBox.Show(ex.Message);
             }
         }
 

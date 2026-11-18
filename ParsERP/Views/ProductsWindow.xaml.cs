@@ -6,7 +6,7 @@ using ParsERP.Core.Services;
 
 namespace ParsERP.Views
 {
-    public partial class ProductsWindow : Window
+    public partial class ProductsWindow : UserControl
     {
         private Database? _db;
         private int? _editId;

@@ -4,7 +4,7 @@ using ParsERP.Core.Services;
 
 namespace ParsERP.Views
 {
-    public partial class AboutWindow : Window
+    public partial class AboutWindow : UserControl
     {
         public AboutWindow()
         {
@@ -29,6 +29,6 @@ namespace ParsERP.Views
             catch { MessageBox.Show(AppLogger.GetLogFolder()); }
         }
 
-        private void BtnClose_Click(object sender, RoutedEventArgs e) => Close();
+        private void BtnClose_Click(object sender, RoutedEventArgs e) { }
     }
 }

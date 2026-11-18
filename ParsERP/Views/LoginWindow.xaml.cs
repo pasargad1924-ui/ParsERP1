@@ -11,10 +11,23 @@ namespace ParsERP.Views
             txtUsername.Focus();
         }
 
-        private void BtnLogin_Click(object sender, RoutedEventArgs e)
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
-            AttemptLogin();
+            Application.Current.Shutdown();
         }
+
+        private void BtnMinimize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ButtonState == MouseButtonState.Pressed)
+                DragMove();
+        }
+
+        private void BtnLogin_Click(object sender, RoutedEventArgs e) => AttemptLogin();
 
         private void AttemptLogin()
         {
@@ -27,13 +40,11 @@ namespace ParsERP.Views
                 return;
             }
 
-            // نسخه فعلی: ورود آزمایشی
-            // بعداً با دیتابیس و هش واقعی جایگزین می‌شود
             if (username.Equals("admin", System.StringComparison.OrdinalIgnoreCase) && password == "1234")
             {
                 var main = new MainWindow();
                 main.Show();
-                this.Close();
+                Close();
             }
             else
             {
@@ -51,10 +62,7 @@ namespace ParsERP.Views
 
         protected override void OnKeyDown(KeyEventArgs e)
         {
-            if (e.Key == Key.Enter)
-            {
-                AttemptLogin();
-            }
+            if (e.Key == Key.Enter) AttemptLogin();
             base.OnKeyDown(e);
         }
     }

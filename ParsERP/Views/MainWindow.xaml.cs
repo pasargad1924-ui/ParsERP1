@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -16,10 +17,10 @@ namespace ParsERP.Views
         {
             InitializeComponent();
             Title = AppInfo.FullTitle;
-            LoadDashboard();
+            NavigateDashboard();
         }
 
-        private void LoadDashboard()
+        private void NavigateDashboard()
         {
             txtPageTitle.Text = "داشبورد";
             MainContent.Content = CreateWelcomePanel();
@@ -38,74 +39,64 @@ namespace ParsERP.Views
             });
             panel.Children.Add(new TextBlock
             {
-                Text = "نسخه " + AppInfo.Version + " — از منوی کناری یا نوار فایل استفاده کنید.",
+                Text = "نسخه " + AppInfo.Version + " — بخش‌ها در همین صفحه و کنار منو باز می‌شوند.",
                 FontSize = 14,
                 Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush"),
-                Margin = new Thickness(0, 0, 0, 20)
+                Margin = new Thickness(0, 0, 0, 12)
             });
             panel.Children.Add(new TextBlock
             {
-                Text = "راهنما: ابتدا «کالا و محصولات» را تعریف کنید، سپس در «سریال‌ها» پارت تولید و تعداد را وارد و سریال یکتا بسازید. جستجو از نوار بالا با Enter یا دکمه ذره‌بین انجام می‌شود.",
+                Text = "جستجوی بالا: نام تأمین‌کننده/مشتری، سریال یا پارت را وارد کنید و Enter بزنید.",
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 13,
-                LineHeight = 22,
-                Foreground = (System.Windows.Media.Brush)FindResource("TextPrimaryBrush")
+                LineHeight = 22
             });
             return panel;
         }
 
-        private void MenuDashboard_Click(object sender, RoutedEventArgs e) => LoadDashboard();
+        private void ShowContent(string title, UserControl view)
+        {
+            txtPageTitle.Text = title;
+            MainContent.Content = view;
+        }
+
+        private void MenuDashboard_Click(object sender, RoutedEventArgs e) => NavigateDashboard();
 
         private void MenuProducts_Click(object sender, RoutedEventArgs e)
-        {
-            txtPageTitle.Text = "کالا و محصولات";
-            new ProductsWindow { Owner = this }.ShowDialog();
-        }
+            => ShowContent("کالا و محصولات", new ProductsWindow());
 
         private void MenuParties_Click(object sender, RoutedEventArgs e)
-        {
-            txtPageTitle.Text = "اشخاص";
-            new PartiesWindow { Owner = this }.ShowDialog();
-        }
+            => ShowContent("اشخاص (دفترچه تماس)", new PartiesWindow());
+
+        private void MenuPurchase_Click(object sender, RoutedEventArgs e)
+            => ShowContent("خرید", new PurchaseWindow());
+
+        private void MenuSales_Click(object sender, RoutedEventArgs e)
+            => ShowContent("فروش", new SalesWindow());
 
         private void MenuSerials_Click(object sender, RoutedEventArgs e)
-        {
-            txtPageTitle.Text = "سریال‌ها";
-            new SerialWindow { Owner = this }.ShowDialog();
-        }
+            => ShowContent("سریال‌ها", new SerialWindow());
 
         private void MenuWarehouse_Click(object sender, RoutedEventArgs e)
-        {
-            txtPageTitle.Text = "انبار";
-            new WarehouseWindow { Owner = this }.ShowDialog();
-        }
+            => ShowContent("انبار", new WarehouseWindow());
 
         private void MenuSettings_Click(object sender, RoutedEventArgs e)
-        {
-            new SettingsWindow { Owner = this }.ShowDialog();
-        }
+            => ShowContent("تنظیمات", new SettingsWindow());
 
         private void MenuHelp_Click(object sender, RoutedEventArgs e)
-        {
-            new AboutWindow { Owner = this }.ShowDialog();
-        }
+            => ShowContent("راهنما و درباره", new AboutWindow());
 
         private void MenuAbout_Click(object sender, RoutedEventArgs e)
-        {
-            new AboutWindow { Owner = this }.ShowDialog();
-        }
+            => ShowContent("راهنما و درباره", new AboutWindow());
 
         private void MenuExit_Click(object sender, RoutedEventArgs e) => Close();
 
-        private void MenuFocusSearch_Click(object sender, RoutedEventArgs e)
-        {
-            txtGlobalSearch.Focus();
-        }
+        private void MenuFocusSearch_Click(object sender, RoutedEventArgs e) => txtGlobalSearch.Focus();
 
         private void MenuStub_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("این بخش در نسخه بعدی تکمیل می‌شود.\nاسکلت منو برای استاندارد شدن نرم‌افزار اضافه شده است.",
-                "به‌زودی", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("این بخش در نسخه بعدی تکمیل می‌شود.", "به‌زودی",
+                MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void GlobalSearch_KeyDown(object sender, KeyEventArgs e)
@@ -123,7 +114,31 @@ namespace ParsERP.Views
                 MessageBox.Show("عبارت جستجو را وارد کنید.", "جستجو", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
-            new SerialWindow(q) { Owner = this }.ShowDialog();
+            try
+            {
+                var db = Database.FromConfig();
+                // اول اشخاص
+                var parties = db.SearchParties(q);
+                if (parties.Count > 0)
+                {
+                    ShowContent("اشخاص — نتیجه جستجو", new PartiesWindow(q));
+                    return;
+                }
+                // سریال
+                var serials = db.SearchSerials(q, 20);
+                if (serials.Count > 0)
+                {
+                    ShowContent("سریال‌ها — نتیجه جستجو", new SerialWindow(q));
+                    return;
+                }
+                // پیش‌فرض: اشخاص با همان عبارت (حتی اگر خالی)
+                ShowContent("جستجو", new PartiesWindow(q));
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Global search", ex);
+                MessageBox.Show(ex.Message, "خطا", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void MenuExportSerial_Click(object sender, RoutedEventArgs e)
@@ -132,29 +147,19 @@ namespace ParsERP.Views
             {
                 var db = Database.FromConfig();
                 var list = db.SearchSerials(null, 10000);
-                var dlg = new SaveFileDialog
-                {
-                    Filter = "CSV (*.csv)|*.csv|متن (*.txt)|*.txt",
-                    FileName = "serials_export.csv"
-                };
-                if (dlg.ShowDialog() != true) return;
-
+                var dlg = new SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = "serials_export.csv" };
+                if (dlg != true) return;
                 var sb = new StringBuilder();
                 sb.AppendLine("SerialNo,ProductCode,Year,Number,Part,Status,ProductName,CreatedAt");
                 foreach (var s in list)
-                {
-                    sb.AppendLine(string.Join(",",
-                        s.SerialNo, s.ProductTypeCode, s.SolarYear, s.SerialNumber,
+                    sb.AppendLine(string.Join(",", s.SerialNo, s.ProductTypeCode, s.SolarYear, s.SerialNumber,
                         Csv(s.PartNumber), Csv(s.Status), Csv(s.ProductName), Csv(s.CreatedAt)));
-                }
                 File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
-                AppLogger.Info("Exported serials to " + dlg.FileName);
-                MessageBox.Show("خروجی ذخیره شد.\n(برای Excel فایل CSV را باز کنید؛ Word/PDF در نسخه‌های بعد)",
-                    "صادر کردن", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("خروجی ذخیره شد.", "صادر کردن", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                AppLogger.Error("Export serials", ex);
+                AppLogger.Error("Export", ex);
                 MessageBox.Show(ex.Message, "خطا", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -163,21 +168,13 @@ namespace ParsERP.Views
         {
             try
             {
-                var dlg = new OpenFileDialog
-                {
-                    Filter = "CSV (*.csv)|*.csv|متن (*.txt)|*.txt"
-                };
-                if (dlg.ShowDialog() != true) return;
-
+                var dlg = new OpenFileDialog { Filter = "CSV (*.csv)|*.csv|متن (*.txt)|*.txt" };
+                if (dlg != true) return;
                 var db = Database.FromConfig();
-                var lines = File.ReadAllLines(dlg.FileName, Encoding.UTF8);
                 int ok = 0, skip = 0;
-                foreach (var line in lines)
+                foreach (var line in File.ReadAllLines(dlg.FileName, Encoding.UTF8))
                 {
-                    var t = line.Trim();
-                    if (t.Length < 10) continue;
-                    // اگر خط CSV است ستون اول را بگیر
-                    var serial = t.Split(',')[0].Trim().Trim('"');
+                    var serial = line.Trim().Split(',')[0].Trim().Trim('"');
                     if (!SerialService.Validate(serial)) { skip++; continue; }
                     if (db.SerialExists(serial)) { skip++; continue; }
                     var p = SerialService.Parse(serial)!;
@@ -185,12 +182,11 @@ namespace ParsERP.Views
                         p.Value.Year, p.Value.Number, p.Value.CheckDigit, "IMPORT", null);
                     ok++;
                 }
-                MessageBox.Show($"وارد شد: {ok}\nرد/تکراری/نامعتبر: {skip}", "وارد کردن",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"وارد شد: {ok}\nرد شده: {skip}", "وارد کردن", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                AppLogger.Error("Import serials", ex);
+                AppLogger.Error("Import", ex);
                 MessageBox.Show(ex.Message, "خطا", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }

@@ -34,6 +34,20 @@ public class Database
         return new Database(config.DatabasePath);
     }
 
+    
+    private void EnsurePartyExtraColumns(Microsoft.Data.Sqlite.SqliteConnection conn)
+    {
+        void Try(string sql)
+        {
+            try { using var c = conn.CreateCommand(); c.CommandText = sql; c.ExecuteNonQuery(); } catch { }
+        }
+        Try("ALTER TABLE Parties ADD COLUMN PhotoPath TEXT");
+        Try("ALTER TABLE Parties ADD COLUMN Notes TEXT");
+        Try("ALTER TABLE Parties ADD COLUMN Latitude REAL");
+        Try("ALTER TABLE Parties ADD COLUMN Longitude REAL");
+        Try("ALTER TABLE Parties ADD COLUMN PrimaryAddress TEXT");
+    }
+
     private void Initialize()
     {
         try
@@ -42,6 +56,7 @@ public class Database
             using var cmd = conn.CreateCommand();
             cmd.CommandText = GetBootstrapSql();
             cmd.ExecuteNonQuery();
+            EnsurePartyExtraColumns(conn);
             AppLogger.Info("Database schema ensured.");
         }
         catch (Exception ex)
@@ -84,6 +99,7 @@ CREATE TABLE IF NOT EXISTS Warehouses (
     WarehouseId INTEGER PRIMARY KEY AUTOINCREMENT, Code TEXT NOT NULL UNIQUE,
     NameFa TEXT NOT NULL, Location TEXT, IsActive INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE IF NOT EXISTS Parties (
+
     PartyId INTEGER PRIMARY KEY AUTOINCREMENT, PartyType TEXT NOT NULL,
     Code TEXT UNIQUE, NameFa TEXT NOT NULL, Mobile TEXT, Phone TEXT, Address TEXT,
     IsActive INTEGER NOT NULL DEFAULT 1, CreatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')));
@@ -103,6 +119,42 @@ CREATE TABLE IF NOT EXISTS StockTransactions (
     Notes TEXT,
     CreatedBy INTEGER,
     CreatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS PurchaseOrders (
+    PurchaseId INTEGER PRIMARY KEY AUTOINCREMENT,
+    PurchaseNo TEXT NOT NULL UNIQUE,
+    SupplierId INTEGER NOT NULL,
+    OrderDate TEXT NOT NULL,
+    Status TEXT NOT NULL DEFAULT 'Draft',
+    TotalAmount REAL DEFAULT 0,
+    Notes TEXT,
+    CreatedBy INTEGER,
+    CreatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE TABLE IF NOT EXISTS PurchaseOrderLines (
+    LineId INTEGER PRIMARY KEY AUTOINCREMENT,
+    PurchaseId INTEGER NOT NULL,
+    ProductId INTEGER NOT NULL,
+    Quantity REAL NOT NULL,
+    UnitPrice REAL NOT NULL,
+    WarehouseId INTEGER,
+    Notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS PartyPhones (
+    PhoneId INTEGER PRIMARY KEY AUTOINCREMENT,
+    PartyId INTEGER NOT NULL,
+    Label TEXT,
+    Number TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS PartyAddresses (
+    AddressId INTEGER PRIMARY KEY AUTOINCREMENT,
+    PartyId INTEGER NOT NULL,
+    Label TEXT,
+    AddressText TEXT NOT NULL,
+    Latitude REAL,
+    Longitude REAL
 );
 CREATE TABLE IF NOT EXISTS AuditLog (
     LogId INTEGER PRIMARY KEY AUTOINCREMENT, UserId INTEGER, Action TEXT NOT NULL,
@@ -484,6 +536,394 @@ INSERT OR IGNORE INTO Settings (Key, Value, Description) VALUES
             list.Add(new PartyRow { PartyId = r.GetInt32(0), PartyType = r.GetString(1), Code = r.GetString(2), NameFa = r.GetString(3), Mobile = r.GetString(4) });
         return list;
     }
+
+    public string NextPurchaseNo()
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT COUNT(1) FROM PurchaseOrders";
+        long n = 0;
+        try { n = Convert.ToInt64(cmd.ExecuteScalar()); } catch { n = 0; }
+        return "PO-" + DateTime.Now.ToString("yyyyMMdd") + "-" + (n + 1).ToString("D4");
+    }
+
+    public int CreatePurchaseOrder(int supplierId, string orderDate, string? notes, int? createdBy,
+        System.Collections.Generic.List<(int ProductId, double Qty, double UnitPrice, int? WarehouseId)> lines,
+        bool receiveToStock)
+    {
+        if (lines == null || lines.Count == 0) throw new ArgumentException("حداقل یک ردیف کالا لازم است.");
+        using var conn = Open();
+        using var tx = conn.BeginTransaction();
+        string poNo = NextPurchaseNo();
+        double total = 0;
+        foreach (var l in lines) total += l.Qty * l.UnitPrice;
+
+        int purchaseId;
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = @"INSERT INTO PurchaseOrders (PurchaseNo, SupplierId, OrderDate, Status, TotalAmount, Notes, CreatedBy, CreatedAt)
+                                VALUES (@no, @sid, @dt, @st, @tot, @notes, @by, datetime('now','localtime'));
+                                SELECT last_insert_rowid();";
+            cmd.Parameters.AddWithValue("@no", poNo);
+            cmd.Parameters.AddWithValue("@sid", supplierId);
+            cmd.Parameters.AddWithValue("@dt", orderDate);
+            cmd.Parameters.AddWithValue("@st", receiveToStock ? "Received" : "Confirmed");
+            cmd.Parameters.AddWithValue("@tot", total);
+            cmd.Parameters.AddWithValue("@notes", (object?)notes ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@by", (object?)createdBy ?? DBNull.Value);
+            purchaseId = Convert.ToInt32(cmd.ExecuteScalar());
+        }
+
+        foreach (var l in lines)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = @"INSERT INTO PurchaseOrderLines (PurchaseId, ProductId, Quantity, UnitPrice, WarehouseId)
+                               VALUES (@pid, @pr, @q, @up, @w);";
+            cmd.Parameters.AddWithValue("@pid", purchaseId);
+            cmd.Parameters.AddWithValue("@pr", l.ProductId);
+            cmd.Parameters.AddWithValue("@q", l.Qty);
+            cmd.Parameters.AddWithValue("@up", l.UnitPrice);
+            cmd.Parameters.AddWithValue("@w", (object?)l.WarehouseId ?? DBNull.Value);
+            cmd.ExecuteNonQuery();
+        }
+        tx.Commit();
+
+        if (receiveToStock)
+        {
+            foreach (var l in lines)
+            {
+                int wh = l.WarehouseId ?? 1;
+                ApplyStockTransaction(wh, l.ProductId, "PurchaseIn", l.Qty, "رسید از خرید " + poNo, createdBy);
+            }
+        }
+        AppLogger.Info($"Purchase created {poNo} id={purchaseId} receive={receiveToStock}");
+        return purchaseId;
+    }
+
+    public System.Collections.Generic.List<PurchaseListItem> GetPurchases(int limit = 100)
+    {
+        var list = new System.Collections.Generic.List<PurchaseListItem>();
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT p.PurchaseId, p.PurchaseNo, p.OrderDate, p.Status, p.TotalAmount,
+                                   IFNULL(s.NameFa,''), IFNULL(p.Notes,'')
+                            FROM PurchaseOrders p
+                            LEFT JOIN Parties s ON s.PartyId = p.SupplierId
+                            ORDER BY p.PurchaseId DESC LIMIT @lim";
+        cmd.Parameters.AddWithValue("@lim", limit);
+        try
+        {
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                list.Add(new PurchaseListItem
+                {
+                    PurchaseId = r.GetInt32(0),
+                    PurchaseNo = r.GetString(1),
+                    OrderDate = r.GetString(2),
+                    Status = r.GetString(3),
+                    TotalAmount = r.GetDouble(4),
+                    SupplierName = r.GetString(5),
+                    Notes = r.GetString(6)
+                });
+            }
+        }
+        catch { }
+        return list;
+    }
+
+    public List<PartyRow> SearchParties(string query)
+    {
+        var list = new List<PartyRow>();
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT PartyId, PartyType, IFNULL(Code,''), NameFa, IFNULL(Mobile,''),
+                                   IFNULL(PrimaryAddress,''), IFNULL(PhotoPath,''), IFNULL(Notes,''),
+                                   Latitude, Longitude
+                            FROM Parties WHERE IsActive=1
+                              AND (NameFa LIKE @q OR IFNULL(Code,'') LIKE @q OR IFNULL(Mobile,'') LIKE @q
+                                   OR IFNULL(PrimaryAddress,'') LIKE @q OR PartyType LIKE @q)
+                            ORDER BY NameFa LIMIT 100";
+        cmd.Parameters.AddWithValue("@q", "%" + (query ?? "").Trim() + "%");
+        try
+        {
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                list.Add(ReadParty(r));
+            }
+        }
+        catch
+        {
+            // fallback older schema
+            return GetParties(null).Where(x =>
+                (x.NameFa + x.Code + x.Mobile + x.PartyType).Contains(query ?? "", StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+        return list;
+    }
+
+    private static PartyRow ReadParty(Microsoft.Data.Sqlite.SqliteDataReader r)
+    {
+        var row = new PartyRow
+        {
+            PartyId = r.GetInt32(0),
+            PartyType = r.GetString(1),
+            Code = r.IsDBNull(2) ? "" : r.GetString(2),
+            NameFa = r.GetString(3),
+            Mobile = r.IsDBNull(4) ? "" : r.GetString(4)
+        };
+        try
+        {
+            row.PrimaryAddress = r.IsDBNull(5) ? "" : r.GetString(5);
+            row.PhotoPath = r.IsDBNull(6) ? "" : r.GetString(6);
+            row.Notes = r.IsDBNull(7) ? "" : r.GetString(7);
+            if (!r.IsDBNull(8)) row.Latitude = r.GetDouble(8);
+            if (!r.IsDBNull(9)) row.Longitude = r.GetDouble(9);
+        }
+        catch { }
+        row.PartyTypeFa = PartyTypeToFa(row.PartyType);
+        return row;
+    }
+
+    public static string PartyTypeToFa(string t) => t switch
+    {
+        "Supplier" => "تأمین‌کننده",
+        "Customer" => "مشتری",
+        "Both" => "هردو",
+        _ => t
+    };
+
+    public static string PartyTypeFromFa(string t) => t switch
+    {
+        "تأمین‌کننده" => "Supplier",
+        "مشتری" => "Customer",
+        "هردو" => "Both",
+        _ => t
+    };
+
+    public int SavePartyFull(string partyType, string nameFa, string? code, string? mobile,
+        string? address, string? photoPath, string? notes, double? lat, double? lng, int? existingId = null)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        if (existingId == null)
+        {
+            cmd.CommandText = @"INSERT INTO Parties (PartyType, Code, NameFa, Mobile, PrimaryAddress, PhotoPath, Notes, Latitude, Longitude, IsActive, CreatedAt)
+                                VALUES (@t,@c,@n,@m,@a,@ph,@notes,@lat,@lng,1,datetime('now','localtime'));
+                                SELECT last_insert_rowid();";
+        }
+        else
+        {
+            cmd.CommandText = @"UPDATE Parties SET PartyType=@t, Code=@c, NameFa=@n, Mobile=@m, PrimaryAddress=@a,
+                                PhotoPath=@ph, Notes=@notes, Latitude=@lat, Longitude=@lng WHERE PartyId=@id;
+                                SELECT @id;";
+            cmd.Parameters.AddWithValue("@id", existingId.Value);
+        }
+        cmd.Parameters.AddWithValue("@t", partyType);
+        cmd.Parameters.AddWithValue("@c", (object?)code ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@n", nameFa.Trim());
+        cmd.Parameters.AddWithValue("@m", (object?)mobile ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@a", (object?)address ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@ph", (object?)photoPath ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@notes", (object?)notes ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@lat", (object?)lat ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@lng", (object?)lng ?? DBNull.Value);
+        return Convert.ToInt32(cmd.ExecuteScalar());
+    }
+
+    public void AddPartyPhone(int partyId, string label, string number)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "INSERT INTO PartyPhones (PartyId, Label, Number) VALUES (@p,@l,@n)";
+        cmd.Parameters.AddWithValue("@p", partyId);
+        cmd.Parameters.AddWithValue("@l", label);
+        cmd.Parameters.AddWithValue("@n", number);
+        cmd.ExecuteNonQuery();
+    }
+
+    public void AddPartyAddress(int partyId, string label, string address, double? lat, double? lng)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "INSERT INTO PartyAddresses (PartyId, Label, AddressText, Latitude, Longitude) VALUES (@p,@l,@a,@lat,@lng)";
+        cmd.Parameters.AddWithValue("@p", partyId);
+        cmd.Parameters.AddWithValue("@l", label);
+        cmd.Parameters.AddWithValue("@a", address);
+        cmd.Parameters.AddWithValue("@lat", (object?)lat ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@lng", (object?)lng ?? DBNull.Value);
+        cmd.ExecuteNonQuery();
+    }
+
+    public List<(string Label, string Number)> GetPartyPhones(int partyId)
+    {
+        var list = new List<(string, string)>();
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT IFNULL(Label,''), Number FROM PartyPhones WHERE PartyId=@p";
+        cmd.Parameters.AddWithValue("@p", partyId);
+        try
+        {
+            using var r = cmd.ExecuteReader();
+            while (r.Read()) list.Add((r.GetString(0), r.GetString(1)));
+        }
+        catch { }
+        return list;
+    }
+
+    public List<(string Label, string Address, double? Lat, double? Lng)> GetPartyAddresses(int partyId)
+    {
+        var list = new List<(string, string, double?, double?)>();
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT IFNULL(Label,''), AddressText, Latitude, Longitude FROM PartyAddresses WHERE PartyId=@p";
+        cmd.Parameters.AddWithValue("@p", partyId);
+        try
+        {
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+                list.Add((r.GetString(0), r.GetString(1),
+                    r.IsDBNull(2) ? null : r.GetDouble(2),
+                    r.IsDBNull(3) ? null : r.GetDouble(3)));
+        }
+        catch { }
+        return list;
+    }
+
+    // --- Sales ---
+    public string NextSalesNo()
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT COUNT(1) FROM SalesOrders";
+        long n = 0;
+        try { n = Convert.ToInt64(cmd.ExecuteScalar()); } catch { n = 0; }
+        return "SO-" + DateTime.Now.ToString("yyyyMMdd") + "-" + (n + 1).ToString("D4");
+    }
+
+    public int CreateSalesOrder(int customerId, string orderDate, string? notes, int? createdBy,
+        List<(int ProductId, double Qty, double UnitPrice, int? WarehouseId, string? SerialNo)> lines,
+        bool issueFromStock)
+    {
+        if (lines == null || lines.Count == 0) throw new ArgumentException("حداقل یک ردیف لازم است.");
+        using var conn = Open();
+        // ensure table
+        try
+        {
+            using var c0 = conn.CreateCommand();
+            c0.CommandText = @"CREATE TABLE IF NOT EXISTS SalesOrders (
+                SalesId INTEGER PRIMARY KEY AUTOINCREMENT, SalesNo TEXT NOT NULL UNIQUE,
+                CustomerId INTEGER NOT NULL, OrderDate TEXT NOT NULL, Status TEXT NOT NULL DEFAULT 'Draft',
+                TotalAmount REAL DEFAULT 0, Notes TEXT, CreatedBy INTEGER,
+                CreatedAt TEXT NOT NULL DEFAULT (datetime('now','localtime')));
+                CREATE TABLE IF NOT EXISTS SalesOrderLines (
+                LineId INTEGER PRIMARY KEY AUTOINCREMENT, SalesId INTEGER NOT NULL, ProductId INTEGER NOT NULL,
+                SerialId INTEGER, Quantity REAL NOT NULL, UnitPrice REAL NOT NULL, WarehouseId INTEGER, Notes TEXT);";
+            c0.ExecuteNonQuery();
+        }
+        catch { }
+
+        using var tx = conn.BeginTransaction();
+        string soNo = NextSalesNo();
+        double total = lines.Sum(l => l.Qty * l.UnitPrice);
+        int salesId;
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.Transaction = tx;
+            cmd.CommandText = @"INSERT INTO SalesOrders (SalesNo, CustomerId, OrderDate, Status, TotalAmount, Notes, CreatedBy, CreatedAt)
+                                VALUES (@no,@cid,@dt,@st,@tot,@notes,@by,datetime('now','localtime'));
+                                SELECT last_insert_rowid();";
+            cmd.Parameters.AddWithValue("@no", soNo);
+            cmd.Parameters.AddWithValue("@cid", customerId);
+            cmd.Parameters.AddWithValue("@dt", orderDate);
+            cmd.Parameters.AddWithValue("@st", issueFromStock ? "Shipped" : "Confirmed");
+            cmd.Parameters.AddWithValue("@tot", total);
+            cmd.Parameters.AddWithValue("@notes", (object?)notes ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@by", (object?)createdBy ?? DBNull.Value);
+            salesId = Convert.ToInt32(cmd.ExecuteScalar());
+        }
+        foreach (var l in lines)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = @"INSERT INTO SalesOrderLines (SalesId, ProductId, Quantity, UnitPrice, WarehouseId, Notes)
+                               VALUES (@sid,@pr,@q,@up,@w,@n);";
+            cmd.Parameters.AddWithValue("@sid", salesId);
+            cmd.Parameters.AddWithValue("@pr", l.ProductId);
+            cmd.Parameters.AddWithValue("@q", l.Qty);
+            cmd.Parameters.AddWithValue("@up", l.UnitPrice);
+            cmd.Parameters.AddWithValue("@w", (object?)l.WarehouseId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@n", (object?)l.SerialNo ?? DBNull.Value);
+            cmd.ExecuteNonQuery();
+        }
+        tx.Commit();
+
+        if (issueFromStock)
+        {
+            foreach (var l in lines)
+            {
+                int wh = l.WarehouseId ?? 1;
+                ApplyStockTransaction(wh, l.ProductId, "SaleOut", l.Qty, "خروج فروش " + soNo, createdBy);
+                if (!string.IsNullOrWhiteSpace(l.SerialNo) && SerialExists(l.SerialNo))
+                {
+                    using var c2 = Open();
+                    using var cmd = c2.CreateCommand();
+                    cmd.CommandText = @"UPDATE SerialNumbers SET Status='Sold', SaleDate=@d, CustomerId=@c WHERE SerialNo=@s";
+                    cmd.Parameters.AddWithValue("@d", orderDate);
+                    cmd.Parameters.AddWithValue("@c", customerId);
+                    cmd.Parameters.AddWithValue("@s", l.SerialNo);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+        AppLogger.Info("Sales created " + soNo);
+        return salesId;
+    }
+
+    public SerialTrace? GetSerialTrace(string serialNo)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"SELECT s.SerialNo, s.ProductTypeCode, s.SolarYear, s.SerialNumber, s.Status,
+                                   s.PartNumber, s.ProductionDate, s.SaleDate, s.SalePrice, s.WarrantyStart, s.WarrantyEnd,
+                                   IFNULL(p.NameFa,''), s.CreatedAt, s.CustomerId, s.PurchaseId, s.ProductionOrderId
+                            FROM SerialNumbers s
+                            LEFT JOIN Products p ON p.ProductId = s.ProductId
+                            WHERE s.SerialNo=@s";
+        cmd.Parameters.AddWithValue("@s", serialNo);
+        using var r = cmd.ExecuteReader();
+        if (!r.Read()) return null;
+        var t = new SerialTrace
+        {
+            SerialNo = r.GetString(0),
+            ProductTypeCode = r.GetString(1),
+            SolarYear = r.GetInt32(2),
+            SerialNumber = r.GetInt32(3),
+            Status = r.GetString(4),
+            PartNumber = r.IsDBNull(5) ? "" : r.GetString(5),
+            ProductionDate = r.IsDBNull(6) ? "" : r.GetString(6),
+            SaleDate = r.IsDBNull(7) ? "" : r.GetString(7),
+            SalePrice = r.IsDBNull(8) ? null : r.GetDouble(8),
+            WarrantyStart = r.IsDBNull(9) ? "" : r.GetString(9),
+            WarrantyEnd = r.IsDBNull(10) ? "" : r.GetString(10),
+            ProductName = r.IsDBNull(11) ? "" : r.GetString(11),
+            CreatedAt = r.IsDBNull(12) ? "" : r.GetString(12)
+        };
+        return t;
+    }
+}
+
+public class PurchaseListItem
+{
+    public int PurchaseId { get; set; }
+    public string PurchaseNo { get; set; } = "";
+    public string OrderDate { get; set; } = "";
+    public string Status { get; set; } = "";
+    public double TotalAmount { get; set; }
+    public string SupplierName { get; set; } = "";
+    public string Notes { get; set; } = "";
 }
 
 public class StockTxRow
@@ -500,13 +940,37 @@ public class StockTxRow
     public string CreatedAt { get; set; } = "";
 }
 
+
+public class SerialTrace
+{
+    public string SerialNo { get; set; } = "";
+    public string ProductTypeCode { get; set; } = "";
+    public int SolarYear { get; set; }
+    public int SerialNumber { get; set; }
+    public string Status { get; set; } = "";
+    public string PartNumber { get; set; } = "";
+    public string ProductionDate { get; set; } = "";
+    public string SaleDate { get; set; } = "";
+    public double? SalePrice { get; set; }
+    public string WarrantyStart { get; set; } = "";
+    public string WarrantyEnd { get; set; } = "";
+    public string ProductName { get; set; } = "";
+    public string CreatedAt { get; set; } = "";
+}
+
 public class PartyRow
 {
     public int PartyId { get; set; }
     public string PartyType { get; set; } = "";
+    public string PartyTypeFa { get; set; } = "";
     public string Code { get; set; } = "";
     public string NameFa { get; set; } = "";
     public string Mobile { get; set; } = "";
+    public string PrimaryAddress { get; set; } = "";
+    public string PhotoPath { get; set; } = "";
+    public string Notes { get; set; } = "";
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
 }
 
 public class WarehouseRow

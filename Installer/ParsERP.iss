@@ -5,7 +5,7 @@
 
 #define MyAppName "پارس‌ئی‌آرپی"
 #define MyAppNameEn "ParsERP"
-#define MyAppVersion "0.9.0"
+#define MyAppVersion "0.7.0"
 #define MyAppPublisher "ParsERP"
 #define MyAppURL "https://github.com/pasargad1924-ui/ParsERP"
 #define MyAppExeName "ParsERP.exe"
@@ -125,7 +125,7 @@ begin
       '[Paths]' + #13#10 +
       'Database=' + DataPath + '\ParsERP.db' + #13#10 +
       'Backup=' + BackupPath + #13#10 +
-      '' + #13#10 +
+      #13#10 +
       '[App]' + #13#10 +
       'Version={#MyAppVersion}' + #13#10 +
       'Language=fa' + #13#10, False);

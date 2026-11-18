@@ -5,7 +5,7 @@ using ParsERP.Core.Services;
 
 namespace ParsERP.Views
 {
-    public partial class SettingsWindow : Window
+    public partial class SettingsWindow : UserControl
     {
         private AppConfig _config;
 
