@@ -7,6 +7,7 @@ on:
       - grok-v0.8
       - grok-v0.9
       - grok-v1.1
+      - grok-v1.3
     paths:
       - 'ParsERP/**'
       - 'ParsERP.Core/**'
@@ -96,7 +97,7 @@ jobs:
           retention-days: 30
 
       - name: Publish installer to GitHub Releases
-        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/grok-v0.') || github.ref == 'refs/heads/grok-v1.1')
+        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/grok-v0.') || github.ref == 'refs/heads/grok-v1.1' || github.ref == 'refs/heads/grok-v1.3')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: parserp-v${{ steps.version.outputs.app_version }}-build-${{ github.run_number }}
