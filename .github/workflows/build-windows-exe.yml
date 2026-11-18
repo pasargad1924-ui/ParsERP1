@@ -6,6 +6,7 @@ on:
       - grok-v0.7
       - grok-v0.8
       - grok-v0.9
+      - grok-v1.1
     paths:
       - 'ParsERP/**'
       - 'ParsERP.Core/**'
@@ -22,7 +23,7 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout version 0.7 source
+      - name: Checkout ParsERP source
         uses: actions/checkout@v4
 
       - name: Setup .NET 8
