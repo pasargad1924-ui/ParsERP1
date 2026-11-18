@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using Microsoft.Win32;
 using ParsERP.Core.Services;
 
@@ -69,10 +70,9 @@ namespace ParsERP.Views
 
             MessageBox.Show("تنظیمات ذخیره شد.\nدر اجرای بعدی از مسیر جدید استفاده می‌شود.", "موفق",
                 MessageBoxButton.OK, MessageBoxImage.Information);
-            DialogResult = true;
-            Close();
+
         }
 
-        private void BtnClose_Click(object sender, RoutedEventArgs e) => Close();
+        private void BtnClose_Click(object sender, RoutedEventArgs e) { }
     }
 }
