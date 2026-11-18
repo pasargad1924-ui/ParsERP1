@@ -5,7 +5,7 @@
 
 #define MyAppName "پارس‌ئی‌آرپی"
 #define MyAppNameEn "ParsERP"
-#define MyAppVersion "0.7.0"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "ParsERP"
 #define MyAppURL "https://github.com/pasargad1924-ui/ParsERP"
 #define MyAppExeName "ParsERP.exe"
