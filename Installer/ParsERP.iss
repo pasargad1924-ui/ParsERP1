@@ -1,12 +1,12 @@
 ; =====================================================
 ; Inno Setup Script for ParsERP
 ; نصب استاندارد ویندوز + انتخاب مسیر دیتابیس و بکاپ
-; Release target: ParsERP 1.1.0
+; Release target: ParsERP 1.2.0
 ; =====================================================
 
 #define MyAppName "پارس‌ئی‌آرپی"
 #define MyAppNameEn "ParsERP"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.2.0"
 #define MyAppPublisher "ParsERP"
 #define MyAppURL "https://github.com/pasargad1924-ui/ParsERP"
 #define MyAppExeName "ParsERP.exe"
