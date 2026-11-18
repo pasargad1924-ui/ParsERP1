@@ -5,14 +5,14 @@
         FontFamily="Vazirmatn, Tahoma, Segoe UI"
         Background="{StaticResource BackgroundBrush}">
 
-    <Window.Resources>
+    <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Styles/Colors.xaml"/>
                 <ResourceDictionary Source="/Styles/Controls.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
-    </Window.Resources>
+    </UserControl.Resources>
 
     <Grid Margin="24">
         <Grid.RowDefinitions>
