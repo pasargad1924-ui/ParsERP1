@@ -148,7 +148,7 @@ namespace ParsERP.Views
                 var db = Database.FromConfig();
                 var list = db.SearchSerials(null, 10000);
                 var dlg = new SaveFileDialog { Filter = "CSV (*.csv)|*.csv", FileName = "serials_export.csv" };
-                if (dlg != true) return;
+                if (dlg.ShowDialog() != true) return;
                 var sb = new StringBuilder();
                 sb.AppendLine("SerialNo,ProductCode,Year,Number,Part,Status,ProductName,CreatedAt");
                 foreach (var s in list)
@@ -169,7 +169,7 @@ namespace ParsERP.Views
             try
             {
                 var dlg = new OpenFileDialog { Filter = "CSV (*.csv)|*.csv|متن (*.txt)|*.txt" };
-                if (dlg != true) return;
+                if (dlg.ShowDialog() != true) return;
                 var db = Database.FromConfig();
                 int ok = 0, skip = 0;
                 foreach (var line in File.ReadAllLines(dlg.FileName, Encoding.UTF8))
