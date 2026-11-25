@@ -169,7 +169,7 @@ namespace ParsERP.Views
             try
             {
                 var dlg = new OpenFileDialog { Filter = "CSV (*.csv)|*.csv|متن (*.txt)|*.txt" };
-                if (dlg != true) return;
+                if (dlg.ShowDialog() != true) return;
                 var db = Database.FromConfig();
                 int ok = 0, skip = 0;
                 foreach (var line in File.ReadAllLines(dlg.FileName, Encoding.UTF8))
