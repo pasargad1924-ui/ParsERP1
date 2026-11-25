@@ -57,7 +57,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path "installer-output" | Out-Null
-          & "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe" "/Oinstaller-output" "Installer/ParsERP.iss"
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/Oinstaller-output" "Installer/ParsERP.iss"
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE" }
           if (!(Test-Path "installer-output/ParsERP_Setup_1.3.0.exe")) { throw "Installer output not found" }
 
